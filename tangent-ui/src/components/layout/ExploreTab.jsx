@@ -86,7 +86,7 @@ const ExploreTab = () => {
     };
 
     const sendToWhisperServer = async (audioBlob) => {
-        const url = `http://127.0.0.1:8080/inference`;
+        const url = `https://open-i0or.onrender.com/inference`;
         try {
             // Decode the WebM audio data
             const arrayBuffer = await audioBlob.arrayBuffer();
