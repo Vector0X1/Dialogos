@@ -207,7 +207,7 @@ export const IntegratedDashboard = () => {
 
   const handleModelClick = async (modelName) => {
     try {
-      const response = await fetch("http://localhost:11434/api/show", {
+      const response = await fetch("https://open-i0or.onrender.com/api/show", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: modelName }),
@@ -226,12 +226,12 @@ export const IntegratedDashboard = () => {
     )
       return;
     try {
-      await fetch("http://localhost:11434/api/delete", {
+      await fetch("https://open-i0or.onrender.com/api/delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: modelName }),
       });
-      const response = await fetch("http://localhost:11434/api/tags");
+      const response = await fetch("https://open-i0or.onrender.com/api/tags");
       const data = await response.json();
       setLocalModels(data.models);
     } catch (error) {
@@ -247,7 +247,7 @@ export const IntegratedDashboard = () => {
     setIsPulling(true);
     setPullStatus("Starting download...");
     try {
-      const response = await fetch("http://localhost:11434/api/pull", {
+      const response = await fetch("https://open-i0or.onrender.com/api/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: pullModelName.trim(), stream: false }),
@@ -255,7 +255,7 @@ export const IntegratedDashboard = () => {
       if (!response.ok) throw new Error("Failed to pull model");
       setPullStatus("Model downloaded successfully");
       setPullModelName("");
-      const tagsResponse = await fetch("http://localhost:11434/api/tags");
+      const tagsResponse = await fetch("https://open-i0or.onrender.com/api/tags");
       const data = await tagsResponse.json();
       setLocalModels(data.models);
     } catch (error) {

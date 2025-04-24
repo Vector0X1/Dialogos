@@ -241,7 +241,7 @@ const TangentChat = ({
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const response = await fetch('http://localhost:11434/api/tags');
+        const response = await fetch('https://open-i0or.onrender.com/api/tags');
         const data = await response.json();
         setModels(data.models);
 
@@ -401,7 +401,7 @@ const TangentChat = ({
         .join('\n');
 
       // 3) Send request
-      const response = await fetch('http://localhost:11434/api/generate', {
+      const response = await fetch('https://open-i0or.onrender.com/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -208,7 +208,7 @@ const ExploreTab = () => {
     };
 
     const url_reflect = `http://127.0.0.1:5001/api/get-reflection`;
-    const url_chat = `http://localhost:11434/api/chat`;
+    const url_chat = `https://open-i0or.onrender.com/api/chat`;
 
     const processTranscript = async (text) => {
         try {

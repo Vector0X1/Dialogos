@@ -197,7 +197,7 @@ export const BranchNode = ({
             const prompt = `Based on this conversation, suggest a concise and descriptive title (max 5 words):\n\n${messages.map(m => `${m.role}: ${m.content}`).join('\n')
                 }`;
 
-            const response = await fetch('http://localhost:11434/api/generate', {
+            const response = await fetch('https://open-i0or.onrender.com/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -263,7 +263,7 @@ export const BranchNode = ({
 
     const sendMessageToLLM = async (message) => {
         try {
-            const response = await fetch('http://localhost:11434/api/chat', {
+            const response = await fetch('https://open-i0or.onrender.com/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
