@@ -15,7 +15,7 @@ export const ChatTypeSelector = ({ chatType, setChatType, onDataUpdate }) => {
     const [error, setError] = useState(null);
 
     const fetchVisualizationData = useCallback(async (type) => {
-        const url = `http://127.0.0.1:5001/api/visualization?type=${type}`;
+        const url = `https://open-i0or.onrender.com/api/visualization?type=${type}`;
         console.log("Fetching from:", url);
 
         try {

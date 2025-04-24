@@ -115,7 +115,7 @@ const ModelsModal = ({
     setIsLoadingLibrary(true);
     setError("");
     try {
-      const response = await fetch("http://127.0.0.1:5001/api/models/library");
+      const response = await fetch("https://open-i0or.onrender.com/api/models/library");
       if (!response.ok)
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       const data = await response.json();

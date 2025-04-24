@@ -57,7 +57,7 @@ export default function FileUploader({ onProcessingComplete, buttonProps = {} })
             clearInterval(pollInterval.current);
         }
 
-        const url = `http://127.0.0.1:5001/api/process/status/${taskId}`;
+        const url = `https://open-i0or.onrender.com/api/process/status/${taskId}`;
 
         const poll = async () => {
             try {
@@ -106,7 +106,7 @@ export default function FileUploader({ onProcessingComplete, buttonProps = {} })
         const formData = new FormData();
         formData.append("file", file);
 
-        const url = `http://127.0.0.1:5001/api/process`;
+        const url = `https://open-i0or.onrender.com/api/process`;
         try {
             const response = await fetch(url, {
                 method: "POST",

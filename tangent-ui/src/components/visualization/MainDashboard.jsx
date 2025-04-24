@@ -105,7 +105,7 @@ const MainDashboard = ({ onConversationSelect }) => {  // Add this prop
         const encodedTitle = encodeURIComponent(title);
         try {
             const response = await axios.get(
-                `http://127.0.0.1:5001/api/messages/${encodedTitle}?type=${chatType}`,
+                `https://open-i0or.onrender.com/api/messages/${encodedTitle}?type=${chatType}`,
                 {
                     validateStatus: function (status) {
                         return status < 500; // Handle 404s without throwing
@@ -132,7 +132,7 @@ const MainDashboard = ({ onConversationSelect }) => {  // Add this prop
             }
 
             try {
-                const response = await fetch(`http://127.0.0.1:5001/api/visualization?type=${chatType}`);
+                const response = await fetch(`https://open-i0or.onrender.com/api/visualization?type=${chatType}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -167,7 +167,7 @@ const MainDashboard = ({ onConversationSelect }) => {  // Add this prop
         fetchData();
     }, [chatType]);
 
-    const url_visualization = "http://127.0.0.1:5001/api/visualization";
+    const url_visualization = "https://open-i0or.onrender.com/api/visualization";
 
     useEffect(() => {
         const handleEsc = (e) => {
@@ -220,7 +220,7 @@ const MainDashboard = ({ onConversationSelect }) => {  // Add this prop
 
     const handleRefresh = async () => {
         setIsLoading(true);
-        const url = `http://127.0.0.1:5001/api/visualization?type=${chatType}`;
+        const url = `https://open-i0or.onrender.com/api/visualization?type=${chatType}`;
 
         try {
             const response = await fetch(url);
@@ -479,7 +479,7 @@ const MainDashboard = ({ onConversationSelect }) => {  // Add this prop
         localStorage.setItem("theme", theme);
     }, [theme]);
 
-    const url_states = "http://127.0.0.1:5001/api/states";
+    const url_states = "https://open-i0or.onrender.com/api/states";
 
     useEffect(() => {
         const fetchStates = async () => {
@@ -1067,7 +1067,7 @@ const MainDashboard = ({ onConversationSelect }) => {  // Add this prop
         try {
             // Fetch all messages including branch information
             const response = await fetch(
-                `http://127.0.0.1:5001/api/messages_all/${encodeURIComponent(title)}?type=${chatType}`
+                `https://open-i0or.onrender.com/api/messages_all/${encodeURIComponent(title)}?type=${chatType}`
             );
             const data = await response.json();
 
@@ -1444,7 +1444,7 @@ const MainDashboard = ({ onConversationSelect }) => {  // Add this prop
         const encodedTitle = encodeURIComponent(title);
         try {
             const response = await axios.get(
-                `http://127.0.0.1:5001/api/messages_all/${encodedTitle}?type=${chatType}`,
+                `https://open-i0or.onrender.com/api/messages_all/${encodedTitle}?type=${chatType}`,
                 {
                     validateStatus: function (status) {
                         return status < 500;

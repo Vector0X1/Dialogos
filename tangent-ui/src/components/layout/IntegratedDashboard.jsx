@@ -375,7 +375,7 @@ export const IntegratedDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:5001/api/visualization");
+        const response = await fetch("https://open-i0or.onrender.com/api/visualization");
         const responseData = await response.json();
         console.log("API Response:", responseData); // Debug log
 
@@ -417,7 +417,7 @@ export const IntegratedDashboard = () => {
 
       // Get the branched data
       const response = await fetch(
-        `http://127.0.0.1:5001/api/messages_all/${encodeURIComponent(
+        `https://open-i0or.onrender.com/api/messages_all/${encodeURIComponent(
           baseTitle
         )}?type=claude`
       );
