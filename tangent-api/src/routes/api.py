@@ -315,6 +315,10 @@ def get_branched_messages():
         chat_type = request.args.get("type", "chatgpt")
         data_dir = CLAUDE_DATA_DIR if chat_type == "claude" else CHATGPT_DATA_DIR
         states_dir = os.path.join(data_dir, "states")
+         print(f"Looking inside: {states_dir}")
+        print("Available files:", os.listdir(states_dir))
+
+
         message_files = [f for f in os.listdir(states_dir) if f.startswith("messages_")]
         if not message_files:
             return jsonify({"error": "No message data found"}), 404
