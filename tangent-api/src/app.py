@@ -4,12 +4,6 @@ from routes.api import api_bp
 from utils import ensure_directories
 from services.background_tasks import start_background_tasks
 import os
-from fastapi import FastAPI
-from routes import messages
-
-app = FastAPI()
-
-app.include_router(messages.router)
 
 app = Flask(__name__)
 CORS(app)
