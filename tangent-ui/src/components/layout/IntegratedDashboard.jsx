@@ -288,7 +288,7 @@ export const IntegratedDashboard = () => {
       };
 
       const response = await axios.post(
-        "http://localhost:5001/api/chats/save",
+        "https://open-i0or.onrender.com/api/chats/save",
         chatData
       );
       if (response.data.success) {

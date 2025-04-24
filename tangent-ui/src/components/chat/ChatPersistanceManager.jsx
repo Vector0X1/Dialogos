@@ -28,7 +28,7 @@ export const ChatPersistenceManager = ({
 
   const loadSavedChats = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/chats/list');
+      const response = await axios.get('https://open-i0or.onrender.com/api/chats/list');
       if (response.data.success) {
         setSavedChats(response.data.chats);
       }
@@ -56,7 +56,7 @@ export const ChatPersistenceManager = ({
         }
       };
 
-      const response = await axios.post('http://localhost:5001/api/chats/save', chatData);
+      const response = await axios.post('https://open-i0or.onrender.com/api/chats/save', chatData);
       if (response.data.success) {
         setActiveChat({
           id: response.data.chatId,
@@ -74,7 +74,7 @@ export const ChatPersistenceManager = ({
   const handleLoad = async (chatId) => {
     setIsLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5001/api/chats/load/${chatId}`);
+      const response = await axios.get(`https://open-i0or.onrender.com/api/chats/load/${chatId}`);
       if (response.data.success) {
         const chatData = response.data.data;
         onLoadChat(chatData.nodes);
@@ -93,7 +93,7 @@ export const ChatPersistenceManager = ({
 
   const handleDelete = async (chatId) => {
     try {
-      const response = await axios.delete(`http://localhost:5001/api/chats/delete/${chatId}`);
+      const response = await axios.delete(`https://open-i0or.onrender.com/api/chats/delete/${chatId}`);
       if (response.data.success) {
         await loadSavedChats();
         if (activeChat?.id === chatId) {
