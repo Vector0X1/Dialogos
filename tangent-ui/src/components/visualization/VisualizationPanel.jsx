@@ -28,7 +28,33 @@ const VisualizationPanel = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [error, setError] = useState(null); // Add state for error handling
   const containerRef = useRef(null);
+
+  // Fetch data if not provided (example implementation)
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`https://open-i0or.onrender.com/api/messages/branched?type=${chatType}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data: ${response.statusText}`);
+        }
+        const fetchedData = await response.json();
+        if (fetchedData.error) {
+          throw new Error(fetchedData.error);
+        }
+        setError(null);
+        handleDataUpdate(fetchedData); // Assuming handleDataUpdate updates the data prop
+      } catch (err) {
+        setError(err.message);
+        console.error("Error fetching branched messages:", err);
+      }
+    };
+
+    if (!data) {
+      fetchData();
+    }
+  }, [chatType, data, handleDataUpdate]);
 
   // Function to fit content to container
   const fitToContainer = useCallback(() => {
@@ -249,19 +275,30 @@ const VisualizationPanel = ({
       </div>
 
       <div className="flex-1 relative">
-        <svg
-          ref={svgRef}
-          className="absolute inset-0 w-full h-full"
-          preserveAspectRatio="xMidYMid meet"
-        />
-        <div className="absolute left-1/2 top-4 flex gap-2 z-10 -translate-x-1/2">
-          <Badge variant="outline" className="h-6 bg-background/80 backdrop-blur">
-            <span className="px-2 w-[100px] text-xs text-muted-foreground">Chats: {nodeStats.total}</span>
-          </Badge>
-          <Badge variant="outline" className="h-6 bg-background/80 backdrop-blur">
-            <span className="px-2 w-[100px] text-xs text-muted-foreground">Topics: {nodeStats.clusters}</span>
-          </Badge>
-        </div>
+        {error ? (
+          <div className="absolute inset-0 flex items-center justify-center text-red-500">
+            <p>Error loading visualization: {error}</p>
+            <Button onClick={handleRefresh} className="ml-4">
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <>
+            <svg
+              ref={svgRef}
+              className="absolute inset-0 w-full h-full"
+              preserveAspectRatio="xMidYMid meet"
+            />
+            <div className="absolute left-1/2 top-4 flex gap-2 z-10 -translate-x-1/2">
+              <Badge variant="outline" className="h-6 bg-background/80 backdrop-blur">
+                <span className="px-2 w-[100px] text-xs text-muted-foreground">Chats: {nodeStats.total}</span>
+              </Badge>
+              <Badge variant="outline" className="h-6 bg-background/80 backdrop-blur">
+                <span className="px-2 w-[100px] text-xs text-muted-foreground">Topics: {nodeStats.clusters}</span>
+              </Badge>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="p-4 border-t border-border space-y-3 bg-background">
