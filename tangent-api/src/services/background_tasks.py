@@ -1,25 +1,31 @@
-# Function to start background tasks
+# services/background_tasks.py
 import re
 import threading
 import traceback
-
+import time
+import logging
 import requests
-
 from shared_data import models_data
 
-_background_tasks_started = False
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+_background_tasks_started = False
+_lock = threading.Lock()  # To prevent race conditions
 
 def start_background_tasks():
     global _background_tasks_started
-    if not _background_tasks_started:
-        try:
-            _background_tasks_started = True
-            threading.Thread(target=fetch_and_store_models, daemon=True).start()
-        except Exception as e:
-            print(f"Failed to start background tasks: {e}")
-            traceback.print_exc()
-
+    with _lock:
+        if not _background_tasks_started:
+            try:
+                _background_tasks_started = True
+                logger.info("Starting background task to fetch models...")
+                threading.Thread(target=fetch_and_store_models, daemon=True).start()
+                logger.info("Background task started successfully")
+            except Exception as e:
+                logger.error(f"Failed to start background tasks: {str(e)}")
+                traceback.print_exc()
 
 def fetch_and_store_models():
     try:
@@ -30,54 +36,52 @@ def fetch_and_store_models():
             "Connection": "keep-alive",
         }
 
-        print("Fetching models from ollama.com/library...")
+        logger.info("Fetching models from ollama.com/library...")
         try:
             models_response = requests.get(
                 "https://ollama.com/library", headers=headers, timeout=10
             )
-            print(f"Initial response status: {models_response.status_code}")
+            logger.info(f"Initial response status: {models_response.status_code}")
         except (requests.ConnectionError, requests.Timeout) as e:
-            print(f"Connection error or timeout occurred: {str(e)}")
+            logger.error(f"Connection error or timeout occurred: {str(e)}")
             return
         except requests.RequestException as e:
-            print(f"An error occurred during the request: {str(e)}")
+            logger.error(f"An error occurred during the request: {str(e)}")
             return
 
         if models_response.status_code != 200:
-            print(f"Failed to fetch models: Status {models_response.status_code}")
+            logger.error(f"Failed to fetch models: Status {models_response.status_code}")
             return
 
         try:
             model_links = re.findall(r'href="/library/([^"]+)', models_response.text)
-            print(f"Found {len(model_links)} model links")
+            logger.info(f"Found {len(model_links)} model links")
         except re.error as e:
-            print(f"Regex error: {str(e)}")
+            logger.error(f"Regex error: {str(e)}")
             return
 
         if not model_links:
-            print("No models found")
+            logger.warning("No models found")
             return
 
         model_names = [link for link in model_links if link]
-        print(f"Processing models: {model_names}")
+        logger.info(f"Processing models: {model_names}")
 
         for name in model_names:
             try:
-                print(f"Fetching tags for {name}...")
+                logger.info(f"Fetching tags for {name}...")
                 try:
                     tags_response = requests.get(
                         f"https://ollama.com/library/{name}/tags",
                         headers=headers,
                         timeout=10,
                     )
-                    print(
-                        f"Tags response status for {name}: {tags_response.status_code}"
-                    )
+                    logger.info(f"Tags response status for {name}: {tags_response.status_code}")
                 except (requests.ConnectionError, requests.Timeout) as e:
-                    print(f"Connection error or timeout occurred for {name}: {str(e)}")
+                    logger.error(f"Connection error or timeout occurred for {name}: {str(e)}")
                     continue
                 except requests.RequestException as e:
-                    print(f"An error occurred during the request for {name}: {str(e)}")
+                    logger.error(f"An error occurred during the request for {name}: {str(e)}")
                     continue
 
                 if tags_response.status_code == 200:
@@ -101,17 +105,19 @@ def fetch_and_store_models():
                         models_data.append(
                             {"name": name, "tags": filtered_tags, "type": model_type}
                         )
-                        print(f"Successfully processed {name}")
+                        logger.info(f"Successfully processed {name}")
                     except re.error as e:
-                        print(f"Regex error while processing tags for {name}: {str(e)}")
+                        logger.error(f"Regex error while processing tags for {name}: {str(e)}")
                         continue
                 else:
-                    print(f"Failed to get tags for {name}")
+                    logger.warning(f"Failed to get tags for {name}: Status {tags_response.status_code}")
             except Exception as e:
-                print(f"Error processing {name}: {str(e)}")
+                logger.error(f"Error processing {name}: {str(e)}")
                 continue
+            # Rate limiting to avoid overwhelming Render or ollama.com
+            time.sleep(1)
 
-        print(f"Fetched and stored {len(models_data)} models")
+        logger.info(f"Fetched and stored {len(models_data)} models")
     except Exception as e:
-        print(f"Error fetching library models: {str(e)}")
+        logger.error(f"Error fetching library models: {str(e)}")
         traceback.print_exc()

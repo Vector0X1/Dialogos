@@ -12,3 +12,4 @@ torch
 openai>=1.0.0
 fastapi
 uvicorn
+gunicorn==22.0.0
