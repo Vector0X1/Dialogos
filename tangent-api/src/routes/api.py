@@ -11,14 +11,19 @@ import pandas as pd
 from flask import Flask, Blueprint, jsonify, request
 from flask_cors import CORS
 from openai import OpenAI
+import logging  # Added for logging
 
 from services.embedding import get_embeddings
 from services.background_processor import BackgroundProcessor
 from services.data_processing import analyze_branches
 from services.topic_generation import generate_topic_for_cluster
 from utils import load_visualization_data
-from config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR
+from config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR, GENERATION_MODEL  # Added GENERATION_MODEL
 from shared_data import models_data
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -490,15 +495,22 @@ def get_state(month_year):
 
 @api_bp.route("/generate", methods=["POST"])
 def generate_text():
+    logger.info("Received request to /api/generate")
     prompt = request.json.get("prompt", "")
+    logger.info(f"Prompt received: {prompt}")
     if not prompt:
+        logger.warning("Empty prompt received")
         return jsonify({"error": "Empty prompt"}), 400
-    model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")  # Default to gpt-4o-mini
     api_key = os.getenv("OPENAI_API_KEY")
+    logger.info(f"Using model: {model}")
     if not api_key:
+        logger.error("Missing OPENAI_API_KEY")
         return jsonify({"error": "Missing OPENAI_API_KEY"}), 500
     try:
+        logger.info("Initializing OpenAI client")
         client = OpenAI(api_key=api_key)
+        logger.info("Sending request to OpenAI API")
         response = client.chat.completions.create(
             model=model,
             messages=[
@@ -507,8 +519,10 @@ def generate_text():
             ],
             temperature=0.8,
         )
+        logger.info("Received response from OpenAI API")
         return jsonify({"response": response.choices[0].message.content})
     except Exception as e:
+        logger.error(f"Error in OpenAI API call: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # ---------------------------------------------------------------------------

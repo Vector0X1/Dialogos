@@ -11,18 +11,26 @@ import { useVisualization } from '../providers/VisualizationProvider';
 import ChatBranchPanel from './ChatBranchPanel';
 import ChatPersistenceManager from './ChatPersistenceManager';
 
-// Utility function for retrying fetch requests
-async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+// Utility function for retrying fetch requests with timeout
+async function fetchWithRetry(url, options, retries = 3, delay = 2000, timeout = 30000) {
   for (let i = 0; i < retries; i++) {
     try {
+      // Create a timeout promise
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      options.signal = controller.signal;
+
       const response = await fetch(url, options);
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
       }
       return response;
     } catch (error) {
       if (i === retries - 1) throw error;
-      console.log(`Retrying... (${i + 1}/${retries})`);
+      console.log(`Retrying... (${i + 1}/${retries}) - Error: ${error.message}`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -465,9 +473,11 @@ const TangentChat = ({
           body: JSON.stringify(payload),
         },
         3, // Number of retries
-        1000 // Delay between retries (ms)
+        2000, // Increased delay between retries (ms)
+        30000 // Timeout after 30 seconds
       );
 
+      console.log('Response status:', response.status);
       const data = await response.json();
       console.log('Received response from /api/generate:', data);
 
@@ -522,7 +532,15 @@ const TangentChat = ({
       }
     } catch (error) {
       console.error('Error in handleSendMessage:', error);
-      setError('Failed to generate response: ' + error.message);
+      let errorMessage = 'Failed to generate response. Please try again.';
+      if (error.message.includes('Missing OPENAI_API_KEY')) {
+        errorMessage = 'Backend configuration error: Missing API key.';
+      } else if (error.message.includes('HTTP error')) {
+        errorMessage = `Backend error: ${error.message}`;
+      } else if (error.name === 'AbortError') {
+        errorMessage = 'Request timed out. The server might be starting up—please try again in a moment.';
+      }
+      setError(errorMessage);
       setNodes(prevNodes => prevNodes.map(node =>
         node.id === nodeId ? { ...node, streamingContent: null } : node
       ));
