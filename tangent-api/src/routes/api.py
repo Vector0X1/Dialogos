@@ -1,3 +1,5 @@
+# api.py
+
 from datetime import datetime
 import json
 import os
@@ -104,7 +106,7 @@ def generate_topic():
         titles = data.get("titles", [])
         if not titles:
             return jsonify({"error": "No titles provided"}), 400
-        topic = generate_topic_for_cluster(titles)
+        topic = generate_topic_for_cluster(tiles)
         return jsonify({"topic": topic})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -282,10 +284,11 @@ def get_branched_messages():
             return jsonify({"error": "Invalid chat type"}), 400
 
         # Use in-memory messages
-        all_messages = IN_MEMORY_MESSAGES[chat_type]
-
+        messages = IN_MEMORY_MESSAGES[chat_type]
+        print(f"Messages in {chat_type}: {messages}")
+        
         # If no messages exist, return an empty response
-        if not all_messages:
+        if not messages:
             print("No messages found in memory. Returning empty response...")
             return jsonify({
                 "branched_chats": {},
@@ -298,79 +301,96 @@ def get_branched_messages():
                 }
             })
 
-        print(f"\nAnalyzing {len(all_messages)} messages for branches")
-        branched_data = analyze_branches(all_messages)
-        response_data = {
-            "branched_chats": {},
-            "stats": {
-                "total_chats_analyzed": len(branched_data),
-                "total_branched_chats": 0,
-                "total_messages_processed": len(all_messages),
-                "branching_structure": {},
-                "edit_branches": {},
-            },
+        # Organize messages into chats
+        chats = {}
+        for msg in messages:
+            # Validate message structure
+            if not all(key in msg for key in ["chat_name", "branch_id", "message_id", "text", "timestamp"]):
+                print(f"Invalid message structure, skipping: {msg}")
+                continue
+            chat_name = msg["chat_name"]
+            if chat_name not in chats:
+                chats[chat_name] = []
+            chats[chat_name].append(msg)
+        print(f"Chats: {chats}")
+
+        # Prepare response structure
+        branched_chats = {}
+        stats = {
+            "branching_structure": {},
+            "edit_branches": {},
+            "total_branched_chats": 0,
+            "total_chats_analyzed": len(chats),
+            "total_messages_processed": len(messages)
         }
 
-        for chat_name, chat_data in branched_data.items():
-            edit_branches = chat_data.get("edit_branches", [])
-            if edit_branches:
-                chat_branches = {"main_branch": [], "branches": {}, "edit_points": []}
-                for idx, branch in enumerate(edit_branches):
-                    branch_id = f"branch_{idx + 1}"
-                    parent_message = next(
-                        (
-                            msg for msg in chat_data["messages"]
-                            if msg.get("message_id") == branch["parent_message"]
-                        ),
-                        None,
-                    )
-                    if parent_message:
-                        if parent_message not in chat_branches["main_branch"]:
-                            chat_branches["main_branch"].append(parent_message)
-                        chat_branches["branches"][branch_id] = {
-                            "parent_message": parent_message,
-                            "branch_start": branch["edit_branch"],
-                            "branch_messages": branch["branch_messages"],
-                            "branch_length": len(branch["branch_messages"]),
-                            "time_gap": branch["time_gap"],
-                            "is_edit_branch": True,
-                        }
-                        chat_branches["edit_points"].append({
-                            "parent_message_id": branch["parent_message"],
-                            "original_message": branch["original_branch"],
-                            "edit_message": branch["edit_branch"],
-                            "time_gap": branch["time_gap"],
-                        })
-                if chat_branches["branches"]:
-                    response_data["branched_chats"][chat_name] = chat_branches
-                    response_data["stats"]["total_branched_chats"] += 1
-                    response_data["stats"]["branching_structure"][chat_name] = {
-                        "total_branches": len(chat_branches["branches"]),
-                        "total_edit_points": len(chat_branches["edit_points"]),
-                        "branch_lengths": [
-                            data["branch_length"]
-                            for data in chat_branches["branches"].values()
-                        ],
-                        "average_time_gap": np.mean(
-                            [
-                                branch["time_gap"]
-                                for branch in chat_branches["branches"].values()
-                            ] or [0]
-                        ) if chat_branches["branches"] else 0,
-                    }
-                    response_data["stats"]["edit_branches"][chat_name] = {
-                        "count": len(edit_branches),
-                        "average_branch_length": np.mean(
-                            [len(branch["branch_messages"]) for branch in edit_branches] or [0]
-                        ),
-                        "time_gaps": [branch["time_gap"] for branch in edit_branches],
-                    }
+        # Process each chat for branching
+        for chat_name, chat_messages in chats.items():
+            print(f"Processing chat: {chat_name}")
+            main_branch = [msg for msg in chat_messages if msg["branch_id"] == "0"]
+            print(f"Main branch for {chat_name}: {main_branch}")
+            branches = {}
+            branched_messages = [msg for msg in chat_messages if msg["branch_id"] != "0"]
+            print(f"Branched messages for {chat_name}: {branched_messages}")
 
+            for msg in branched_messages:
+                branch_id = msg["branch_id"]
+                print(f"Processing branched message: {msg}")
+                if branch_id not in branches:
+                    # Prefer parent from main branch
+                    parent_msg = next(
+                        (m for m in chat_messages if m["message_id"] == msg.get("parent_message") and m["branch_id"] == "0"),
+                        None
+                    )
+                    # If not found in main branch, look in all messages
+                    if parent_msg is None:
+                        parent_msg = next(
+                            (m for m in chat_messages if m["message_id"] == msg.get("parent_message")),
+                            None
+                        )
+                    print(f"Parent message for {msg['message_id']}: {parent_msg}")
+                    branches[branch_id] = {
+                        "parent_message": parent_msg,
+                        "branch_messages": []
+                    }
+                branches[branch_id]["branch_messages"].append(msg)
+            print(f"Branches for {chat_name}: {branches}")
+
+            # Include the chat in branched_chats if it has either a main branch or branches
+            if main_branch or branches:
+                print(f"Adding {chat_name} to branched_chats")
+                branched_chats[chat_name] = {
+                    "main_branch": main_branch,
+                    "branches": branches
+                }
+                if branches:
+                    stats["total_branched_chats"] += 1
+                    # Compute additional stats for branching structure
+                    stats["branching_structure"][chat_name] = {
+                        "total_branches": len(branches),
+                        "total_edit_points": 0,  # Not implemented in this version
+                        "branch_lengths": [
+                            len(branch["branch_messages"]) for branch in branches.values()
+                        ],
+                        "average_time_gap": 0  # Not computed in this version
+                    }
+                    stats["edit_branches"][chat_name] = {
+                        "count": 0,  # Not implemented in this version
+                        "average_branch_length": 0,
+                        "time_gaps": []
+                    }
+            else:
+                print(f"Skipping {chat_name}: no main branch or branches")
+
+        print(f"Final branched_chats: {branched_chats}")
         print("\n=== Branch Analysis Complete ===")
-        print(f"Total chats analyzed: {response_data['stats']['total_chats_analyzed']}")
-        print(f"Chats with edit branches: {response_data['stats']['total_branched_chats']}")
-        print(f"Total messages processed: {response_data['stats']['total_messages_processed']}")
-        return jsonify(response_data)
+        print(f"Total chats analyzed: {stats['total_chats_analyzed']}")
+        print(f"Chats with branches: {stats['total_branched_chats']}")
+        print(f"Total messages processed: {stats['total_messages_processed']}")
+        return jsonify({
+            "branched_chats": branched_chats,
+            "stats": stats
+        })
 
     except Exception as e:
         error_msg = f"Error processing branched messages: {str(e)}"
@@ -397,6 +417,15 @@ def add_message():
         if not all([chat_name, message_id, text]):
             return jsonify({"error": "Missing required fields (chat_name, message_id, text)"}), 400
 
+        # Check for duplicate message_id within the same chat_name
+        existing_message = next(
+            (msg for msg in IN_MEMORY_MESSAGES[chat_type] if msg["message_id"] == message_id and msg["chat_name"] == chat_name),
+            None
+        )
+        if existing_message:
+            print(f"Message with message_id {message_id} already exists for chat {chat_name}: {existing_message}")
+            return jsonify({"success": False, "message": "Message with this ID already exists"}), 400
+
         new_message = {
             "chat_name": chat_name,
             "branch_id": branch_id,
@@ -408,9 +437,28 @@ def add_message():
             new_message["parent_message"] = parent_message
 
         IN_MEMORY_MESSAGES[chat_type].append(new_message)
+        print(f"Message added: {new_message}")
         return jsonify({"success": True, "message": "Message added successfully"})
     except Exception as e:
+        print(f"Error in add_message: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/messages/raw", methods=["GET"])
+def get_raw_messages():
+    chat_type = request.args.get("type", "chatgpt")
+    if chat_type not in IN_MEMORY_MESSAGES:
+        return jsonify({"error": "Invalid chat type"}), 400
+    return jsonify(IN_MEMORY_MESSAGES[chat_type])
+
+
+@api_bp.route("/messages/clear", methods=["POST"])
+def clear_messages():
+    chat_type = request.json.get("type", "chatgpt")
+    if chat_type not in IN_MEMORY_MESSAGES:
+        return jsonify({"error": "Invalid chat type"}), 400
+    IN_MEMORY_MESSAGES[chat_type] = []
+    return jsonify({"success": True, "message": "Messages cleared"})
 
 
 @api_bp.route("/content/identify-messages", methods=["POST"])
