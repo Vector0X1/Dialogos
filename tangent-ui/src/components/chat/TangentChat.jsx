@@ -1,5 +1,3 @@
-// TangentChat.jsx
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { BranchNode } from '../visualization/BranchNode';
 import ChatInterface from './ChatInterface';
@@ -12,6 +10,23 @@ import { cn } from "../../utils/utils";
 import { useVisualization } from '../providers/VisualizationProvider';
 import ChatBranchPanel from './ChatBranchPanel';
 import ChatPersistenceManager from './ChatPersistenceManager';
+
+// Utility function for retrying fetch requests
+async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response;
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      console.log(`Retrying... (${i + 1}/${retries})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
 
 export function GridBackground({ translate, scale, className }) {
   const gridSize = 20;
@@ -141,6 +156,7 @@ const TangentChat = ({
   const nodesRef = useRef(nodes);
   const transformRef = useRef({ scale, translate });
   const contentRef = useRef(null);
+  const [error, setError] = useState(null); // Added state for error handling
 
   // Add states for ChatBranchPanel
   const [chatType, setChatType] = useState('chatgpt');
@@ -403,6 +419,7 @@ const TangentChat = ({
     }
 
     setInputValue('');
+    setError(null); // Clear any previous errors
 
     const newMessage = {
       role: 'user',
@@ -435,58 +452,30 @@ const TangentChat = ({
         .map(msg => `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`)
         .join('\n');
 
-      const response = await fetch('https://open-i0or.onrender.com/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: selectedModel,
-          prompt: formattedConversation + '\n\nHuman: ' + message + '\n\nAssistant:',
-          stream: true,
-          system: currentNode.systemPrompt || systemPrompt,
-          options: {
-            temperature: temperature || 0.7,
-            num_ctx: 8192,
-            num_predict: 2048,
-            top_p: 0.9,
-            top_k: 20,
-          },
-        }),
-      });
+      const payload = {
+        prompt: formattedConversation + '\n\nHuman: ' + message + '\n\nAssistant:'
+      };
+      console.log('Sending payload to /api/generate:', payload);
 
-      let accumulatedResponse = '';
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      const response = await fetchWithRetry(
+        'https://open-i0or.onrender.com/api/generate',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        3, // Number of retries
+        1000 // Delay between retries (ms)
+      );
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+      const data = await response.json();
+      console.log('Received response from /api/generate:', data);
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-            const responseText = data.response || (data.message && data.message.content);
-
-            if (responseText) {
-              accumulatedResponse += responseText;
-              setNodes(prevNodes => prevNodes.map(node =>
-                node.id === nodeId
-                  ? { ...node, streamingContent: accumulatedResponse }
-                  : node
-              ));
-            }
-          } catch (err) {
-            console.error('Error parsing JSON line:', err);
-          }
-        }
-      }
+      const accumulatedResponse = data.response || 'No response received';
 
       const finalMessage = {
         role: 'assistant',
-        content: accumulatedResponse || 'No response received',
+        content: accumulatedResponse,
         timestamp: new Date().toISOString(),
       };
 
@@ -533,6 +522,7 @@ const TangentChat = ({
       }
     } catch (error) {
       console.error('Error in handleSendMessage:', error);
+      setError('Failed to generate response: ' + error.message);
       setNodes(prevNodes => prevNodes.map(node =>
         node.id === nodeId ? { ...node, streamingContent: null } : node
       ));
@@ -1404,6 +1394,13 @@ export default function PreviewComponent() {
 
   return (
     <div className="relative flex h-full bg-background overflow-hidden">
+      {/* Display error message in the UI */}
+      {error && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg z-50">
+          {error}
+          <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
+        </div>
+      )}
       <ChatPersistenceManager
         nodes={nodes}
         setNodes={setNodes}
