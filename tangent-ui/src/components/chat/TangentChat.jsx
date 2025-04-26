@@ -1552,20 +1552,20 @@ export default function PreviewComponent() {
     selectedModel={selectedModel}
     isStreaming={activeResponses.size > 0}
   />
- <ChatInterface
-  node={nodes.find(n => n.id === selectedNode)}
-  messages={getFullMessageHistory(selectedNode)}
-  onSend={handleSendMessage}  
-  onCreateBranch={onCreateBranch}
-  isExpanded={expandedNodes.has(selectedNode)}
-  isLoading={activeResponses.has(selectedNode)}
-  streamingMessage={nodes.find(n => n.id === selectedNode)?.streamingContent}
-  containerWidth={getChatContainerWidth()}
-  onSizeChange={setChatContainerSize}
-  isPanelCollapsed={isPanelCollapsed}
-  input={inputValue}           
-  onInputChange={handleInputChange}  
-/>
+  <ChatInterface
+    activeNode={nodes.find(n => n.id === selectedNode)} // Fix: Use activeNode instead of node
+    messages={getFullMessageHistory(selectedNode)}
+    onSend={handleSendMessage}  
+    onCreateBranch={onCreateBranch}
+    isExpanded={expandedNodes.has(selectedNode)}
+    isLoading={activeResponses.has(selectedNode)}
+    streamingMessage={nodes.find(n => n.id === selectedNode)?.streamingContent}
+    containerWidth={getChatContainerWidth()}
+    onSizeChange={setChatContainerSize}
+    isPanelCollapsed={isPanelCollapsed}
+    input={inputValue}           
+    onInputChange={handleInputChange}  
+  />
 </ChatContainer>
 
 
