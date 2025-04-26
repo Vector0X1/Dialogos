@@ -140,6 +140,7 @@ export const ChatPersistenceManager = ({
         </Button>
       </div>
 
+      {/* Load Dialog */}
       <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
         <DialogContent>
           <DialogHeader>
@@ -184,6 +185,7 @@ export const ChatPersistenceManager = ({
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -192,17 +194,27 @@ export const ChatPersistenceManager = ({
               Are you sure you want to delete "{chatToDelete?.title}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 justify-end mt-4">
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => chatToDelete && handleDelete(chatToDelete.id)}
-            >
-              Delete
-            </Button>
-          </div>
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Delete Chat</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete "{chatToDelete?.title}"? This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex gap-2 justify-end mt-4">
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button
+                  variant="destructive"
+                  onClick={() => chatToDelete && handleDelete(chatToDelete.id)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
     </>
