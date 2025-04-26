@@ -456,13 +456,10 @@ const TangentChat = ({
         ? [...(currentNode.contextMessages || []), newMessage]
         : [...currentNode.messages];
 
-      const formattedConversation = conversationContext
-        .map(msg => `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`)
-        .join('\n');
 
-      const payload = {
-        prompt: formattedConversation + '\n\nHuman: ' + message + '\n\nAssistant:'
-      };
+        const payload = {
+          prompt: message
+        };
       console.log('Sending payload to /api/generate:', payload);
 
       const response = await fetchWithRetry(
