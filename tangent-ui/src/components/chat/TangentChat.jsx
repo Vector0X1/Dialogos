@@ -1555,7 +1555,7 @@ export default function PreviewComponent() {
  <ChatInterface
   node={nodes.find(n => n.id === selectedNode)}
   messages={getFullMessageHistory(selectedNode)}
-  onSend={handleSendMessage}   {/* 🔥 Change this */}
+  onSend={handleSendMessage}  
   onCreateBranch={onCreateBranch}
   isExpanded={expandedNodes.has(selectedNode)}
   isLoading={activeResponses.has(selectedNode)}
