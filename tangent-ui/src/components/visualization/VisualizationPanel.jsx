@@ -28,7 +28,38 @@ const VisualizationPanel = ({
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [file, setFile] = useState(null);
     const containerRef = useRef(null);
+
+    // File upload handler (fallback)
+    const handleFileUpload = async () => {
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const response = await fetch(`https://open-i0or.onrender.com/api/process?type=${chatType}`, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.task_id) {
+                const checkStatus = async () => {
+                    const status = await fetch(`https://open-i0or.onrender.com/api/process/status/${result.task_id}`);
+                    const statusData = await status.json();
+                    if (statusData.completed) {
+                        handleRefresh();
+                    } else if (statusData.error) {
+                        console.error('Task failed:', statusData.error);
+                    } else {
+                        setTimeout(checkStatus, 2000);
+                    }
+                };
+                checkStatus();
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+        }
+    };
 
     // Function to fit content to container
     const fitToContainer = useCallback(() => {
@@ -97,7 +128,7 @@ const VisualizationPanel = ({
         if (!bounds) return;
 
         const boundsWidth = bounds.x2 - bounds.x1;
-        const boundsHeight = bounds.y2 - bounds.y1;
+        const boundsHeight =-0.5 * boundsHeight;
 
         const scale = Math.min(
             (width - padding * 2) / boundsWidth,
@@ -238,12 +269,24 @@ const VisualizationPanel = ({
                         placeholder="Search conversations and topics..."
                     />
                 </div>
+                {/* File Upload (Fallback) */}
+                <div className="mt-2">
+                    <input
+                        type="file"
+                        accept=".json"
+                        onChange={(e) => setFile(e.target.files[0])}
+                        className="text-sm"
+                    />
+                    <Button onClick={handleFileUpload} size="sm" className="mt-2">
+                        Upload Chat Data (Manual)
+                    </Button>
+                </div>
             </div>
 
             <div className="flex-1 relative">
-                {!data ? (
+                {!data?.chartData?.[0]?.data?.length ? (
                     <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                        <p>No data available. Please try refreshing.</p>
+                        <p>No visualization data available. Try generating chats or uploading data.</p>
                         <Button onClick={handleRefresh} className="ml-4">
                             Refresh
                         </Button>

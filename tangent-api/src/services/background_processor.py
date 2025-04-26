@@ -1,178 +1,107 @@
-import queue
-import threading
-import time
-import json
 import os
-from typing import Dict, Optional, Tuple
-
+import json
+import time
+import threading
+import queue
 import pandas as pd
 import numpy as np
-from models import ProcessingTask
-import traceback
-from config import CHATGPT_DATA_DIR, CLAUDE_DATA_DIR
-from services.data_processing import process_chatgpt_messages, process_claude_messages, save_state, save_latest_state, process_data_by_month
-from services.embedding import get_embeddings
-from services.clustering import perform_clustering, generate_cluster_metadata
+from src.utils import logger
+from src.services.data_processing import detect_chat_type, process_chatgpt_messages, process_claude_messages
+from src.services.embedding import get_embeddings
+from src.services.clustering import perform_clustering
+from src.services.topic_generation import generate_topics
+from src.config import BASE_DATA_DIR, IN_MEMORY_MESSAGES
 
 class BackgroundProcessor:
     def __init__(self):
-        self.tasks: Dict[str, ProcessingTask] = {}
         self.task_queue = queue.Queue()
-        self.processing_thread = threading.Thread(
-            target=self._process_queue, daemon=True
-        )
+        self.processing_thread = threading.Thread(target=self.process_queue, daemon=True)
         self.processing_thread.start()
 
-    def start_task(self, file_path: str) -> str:
-        task_id = str(time.time())
-        try:
-            chat_type, data_dir = detect_chat_type(file_path)
-            task = ProcessingTask(
-                file_path=file_path,
-                status="queued",
-                progress=0.0,
-                chat_type=chat_type,
-                data_dir=data_dir,
-            )
-            self.tasks[task_id] = task
-            self.task_queue.put((task_id, task))
-            return task_id
-        except Exception as e:
-            raise Exception(f"Error starting task: {str(e)}")
+    def start_task(self, file_path: str = None):
+        """
+        Start a processing task for a file or in-memory messages.
+        
+        Args:
+            file_path (str, optional): Path to uploaded JSON file. If None, processes IN_MEMORY_MESSAGES.
+        
+        Returns:
+            str: Task ID.
+        """
+        task_id = f"{time.time()}"
+        self.task_queue.put(Task(task_id, file_path))
+        logger.info(f"Started task {task_id}")
+        return task_id
 
-    def get_task_status(self, task_id: str) -> Optional[ProcessingTask]:
-        return self.tasks.get(task_id)
-
-    def _process_queue(self):
+    def process_queue(self):
         while True:
+            task = self.task_queue.get()
             try:
-                task_id, task = self.task_queue.get()
-                if task_id not in self.tasks:
+                logger.info(f"Processing task {task.task_id}")
+                if task.file_path:
+                    # File-based processing
+                    data = self.load_json(task.file_path)
+                    chat_type = detect_chat_type(data)
+                else:
+                    # In-memory processing
+                    chat_type = "chatgpt"  # Adjust for claude if needed
+                    data = IN_MEMORY_MESSAGES.get(chat_type, [])
+
+                if not data:
+                    logger.warning(f"No data to process for task {task.task_id}")
                     continue
 
-                task.status = "processing"
-                try:
-                    # Load and process the data based on chat type
-                    with open(task.file_path, "r") as f:
-                        data = json.load(f)
+                # Convert to DataFrame
+                df = process_chatgpt_messages(data) if chat_type == "chatgpt" else process_claude_messages(data)
+                logger.info(f"Loaded {len(df)} messages for {chat_type}")
 
-                    # Process messages based on chat type
-                    messages = (
-                        process_chatgpt_messages(data)
-                        if task.chat_type == "chatgpt"
-                        else process_claude_messages(data)
-                    )
+                # Generate embeddings
+                messages = df["text"].tolist()
+                embeddings = get_embeddings(messages)
+                if not embeddings or len(embeddings) != len(messages):
+                    logger.error(f"Failed to generate embeddings for task {task.task_id}")
+                    continue
 
-                    # Create DataFrame and process month by month
-                    df = pd.DataFrame(messages)
-                    df["month_year"] = df["timestamp"].dt.strftime("%Y-%m")
+                # Dimensionality reduction
+                from sklearn.manifold import TSNE
+                embeddings_array = np.array(embeddings)
+                embeddings_2d = TSNE(n_components=2, random_state=42).fit_transform(embeddings_array)
 
-                    total_steps = len(df["month_year"].unique()) + 3  # +3 for embedding, clustering, and saving
-                    current_step = 0
+                # Clustering
+                clusters = perform_clustering(embeddings, min_cluster_size=max(2, len(embeddings) // 10))
 
-                    for update in process_data_by_month(df):
-                        current_step += 1
-                        task.progress = (current_step / total_steps) * 100
+                # Generate topics
+                topics = generate_topics(df, clusters)
 
-                        # Save state and files
-                        save_state(update, update["month_year"], task.data_dir)
+                # Save results
+                output_dir = os.path.join(BASE_DATA_DIR, chat_type)
+                os.makedirs(output_dir, exist_ok=True)
+                
+                with open(os.path.join(output_dir, "embeddings_2d.json"), "w") as f:
+                    json.dump(embeddings_2d.tolist(), f)
+                with open(os.path.join(output_dir, "clusters.json"), "w") as f:
+                    json.dump(clusters.tolist(), f)
+                with open(os.path.join(output_dir, "topics.json"), "w") as f:
+                    json.dump(topics, f)
+                with open(os.path.join(output_dir, "chat_titles.json"), "w") as f:
+                    json.dump(df["chat_name"].unique().tolist(), f)
+                with open(os.path.join(output_dir, "chats_with_reflections.json"), "w") as f:
+                    json.dump([], f)  # Placeholder; add reflection logic if needed
 
-                        # Save monthly messages
-                        month_messages = df[df["month_year"] <= update["month_year"]]
-                        messages_json = month_messages.to_json(
-                            orient="records", date_format="iso"
-                        )
+                # Persist IN_MEMORY_MESSAGES
+                with open(os.path.join(BASE_DATA_DIR, f"{chat_type}_messages.json"), "w") as f:
+                    json.dump(IN_MEMORY_MESSAGES.get(chat_type, []), f)
 
-                        # Save to appropriate directory
-                        states_dir = os.path.join(task.data_dir, "states")
-                        os.makedirs(states_dir, exist_ok=True)
-
-                        with open(
-                            os.path.join(
-                                states_dir, f'messages_{update["month_year"]}.json'
-                            ),
-                            "w",
-                        ) as f:
-                            f.write(messages_json)
-
-                        # Update latest state files
-                        save_latest_state(update, task.data_dir)
-
-                    # Step: Generate embeddings for visualization
-                    current_step += 1
-                    task.progress = (current_step / total_steps) * 100
-                    texts = df["text"].tolist()
-                    embeddings = get_embeddings(texts)
-                    if not embeddings:
-                        raise Exception("Failed to generate embeddings")
-                    # For simplicity, treat embeddings as 2D (in practice, apply t-SNE or UMAP for dimensionality reduction)
-                    embeddings_2d = np.array(embeddings).tolist()  # Placeholder: real apps would reduce dimensions here
-
-                    # Step: Perform clustering
-                    current_step += 1
-                    task.progress = (current_step / total_steps) * 100
-                    # Compute distance matrix for clustering
-                    distance_matrix = np.array([[np.linalg.norm(np.array(e1) - np.array(e2)) for e1 in embeddings] for e2 in embeddings])
-                    clusters = perform_clustering(distance_matrix, len(embeddings))
-
-                    # Step: Generate cluster metadata and save files
-                    current_step += 1
-                    task.progress = (current_step / total_steps) * 100
-                    chat_titles = df["chat_name"].tolist()
-                    cluster_metadata = generate_cluster_metadata(clusters, chat_titles, distance_matrix)
-
-                    # Save visualization files
-                    with open(os.path.join(task.data_dir, "embeddings_2d.json"), "w") as f:
-                        json.dump(embeddings_2d, f)
-                    with open(os.path.join(task.data_dir, "clusters.json"), "w") as f:
-                        json.dump(clusters.tolist(), f)
-                    with open(os.path.join(task.data_dir, "topics.json"), "w") as f:
-                        json.dump(cluster_metadata, f)
-                    with open(os.path.join(task.data_dir, "chat_titles.json"), "w") as f:
-                        json.dump(chat_titles, f)
-                    with open(os.path.join(task.data_dir, "chats_with_reflections.json"), "w") as f:
-                        json.dump([], f)  # Placeholder for reflections
-
-                    task.completed = True
-                    task.status = "completed"
-
-                except Exception as e:
-                    task.error = str(e)
-                    task.status = "failed"
-                    print(f"Processing error: {str(e)}")
-                    traceback.print_exc()
+                logger.info(f"Task {task.task_id} completed successfully")
 
             except Exception as e:
-                print(f"Error in processing thread: {str(e)}")
-                traceback.print_exc()
-                continue
+                logger.error(f"Task {task.task_id} failed: {str(e)}")
 
-            finally:
-                self.task_queue.task_done()
-
-def detect_chat_type(file_path: str) -> Tuple[str, str]:
-    """
-    Detect whether the file contains Claude or ChatGPT chats and return the appropriate data directory
-    """
-    try:
+    def load_json(self, file_path: str):
         with open(file_path, "r") as f:
-            data = json.load(f)
+            return json.load(f)
 
-        # Check first item in the data
-        if isinstance(data, list):
-            first_item = data[0] if data else {}
-
-            # ChatGPT format detection (has 'mapping' field)
-            if isinstance(first_item, dict) and "mapping" in first_item:
-                os.makedirs(CHATGPT_DATA_DIR, exist_ok=True)
-                return "chatgpt", CHATGPT_DATA_DIR
-
-            # Claude format detection (has 'chat_messages' field)
-            elif isinstance(first_item, dict) and "chat_messages" in first_item:
-                os.makedirs(CLAUDE_DATA_DIR, exist_ok=True)
-                return "claude", CLAUDE_DATA_DIR
-
-        raise ValueError("Unknown chat format")
-
-    except Exception as e:
-        raise Exception(f"Error detecting chat type: {str(e)}")
+class Task:
+    def __init__(self, task_id: str, file_path: str = None):
+        self.task_id = task_id
+        self.file_path = file_path
