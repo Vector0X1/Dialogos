@@ -1547,18 +1547,25 @@ export default function PreviewComponent() {
           ))}
         </div>
       </div>
-      <ChatContainer
-        node={nodes.find(n => n.id === selectedNode)}
-        messages={getFullMessageHistory(selectedNode)}
-        onSendMessage={handleSendMessage}
-        onCreateBranch={onCreateBranch}
-        isExpanded={expandedNodes.has(selectedNode)}
-        isLoading={activeResponses.has(selectedNode)}
-        streamingContent={nodes.find(n => n.id === selectedNode)?.streamingContent}
-        containerWidth={getChatContainerWidth()}
-        onSizeChange={setChatContainerSize}
-        isPanelCollapsed={isPanelCollapsed}
-      />
+      <ChatContainer>
+  <ModelStatus
+    selectedModel={selectedModel}
+    isStreaming={activeResponses.size > 0}
+  />
+  <ChatInterface
+    node={nodes.find(n => n.id === selectedNode)}
+    messages={getFullMessageHistory(selectedNode)}
+    onSendMessage={handleSendMessage}
+    onCreateBranch={onCreateBranch}
+    isExpanded={expandedNodes.has(selectedNode)}
+    isLoading={activeResponses.has(selectedNode)}
+    streamingContent={nodes.find(n => n.id === selectedNode)?.streamingContent}
+    containerWidth={getChatContainerWidth()}
+    onSizeChange={setChatContainerSize}
+    isPanelCollapsed={isPanelCollapsed}
+  />
+</ChatContainer>
+
     </div>
   );
 };
