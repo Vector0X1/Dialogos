@@ -11,7 +11,7 @@ import {
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react";
-import ChatPersistenceManager from "../chat/ChatPersistanceManager";
+import ChatPersistenceManager from "../chat/ChatPersistenceManager";
 import FileUploader from "../forms/FileUploader";
 import { Button } from "../core/button";
 import ModelsModal from "../overlay/ModelsModal";
