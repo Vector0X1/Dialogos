@@ -16,7 +16,7 @@ async function createWindow() {
   });
 
   win.loadURL(
-    isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, 'build', 'index.html')}`
+    isDev ? 'https://open-i0or.onrender.com' : `file://${path.join(__dirname, 'build', 'index.html')}`
   );
 }
 

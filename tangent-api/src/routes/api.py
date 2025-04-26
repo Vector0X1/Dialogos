@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# CORS configuration is now handled in app.py, so no need to configure it here
+# CORS configuration is handled in app.py
 
 api_bp = Blueprint("api", __name__)
 background_processor = BackgroundProcessor()
@@ -126,12 +126,11 @@ def get_models():
     })
 
 # ---------------------------------------------------------------------------
-#  Tags endpoint (added to fix 500 error)
+#  Tags endpoint
 # ---------------------------------------------------------------------------
 
 @api_bp.route("/tags", methods=["GET"])
 def get_tags():
-    # The frontend expects an array of tags. Returning an empty array for now.
     return jsonify([])
 
 # ---------------------------------------------------------------------------
@@ -144,7 +143,48 @@ def embeddings():
 
 @api_bp.route("/visualization", methods=["GET"])
 def get_visualization_data():
-    return jsonify([])
+    try:
+        chat_type = request.args.get("type", "chatgpt")
+        if chat_type not in ["chatgpt", "claude"]:
+            return jsonify({"error": "Invalid chat type"}), 400
+
+        # Select the appropriate data directory based on chat type
+        data_dir = CLAUDE_DATA_DIR if chat_type == "claude" else CHATGPT_DATA_DIR
+        logger.info(f"Fetching visualization data for chat_type={chat_type} from {data_dir}")
+
+        # Load visualization data
+        visualization_data = load_visualization_data(data_dir)
+
+        # Validate the data
+        if (
+            not isinstance(visualization_data.get("points"), list) or
+            not isinstance(visualization_data.get("clusters"), list) or
+            not isinstance(visualization_data.get("titles"), list) or
+            not isinstance(visualization_data.get("topics"), dict)
+        ):
+            logger.warning(f"Invalid or incomplete visualization data in {data_dir}: {visualization_data}")
+            return jsonify({
+                "error": "No visualization data available for this chat type",
+                "points": [],
+                "clusters": [],
+                "titles": [],
+                "topics": {},
+                "chats_with_reflections": []
+            }), 200
+
+        logger.info(f"Successfully loaded visualization data: {visualization_data}")
+        return jsonify(visualization_data)
+
+    except Exception as e:
+        logger.error(f"Error fetching visualization data: {str(e)}")
+        return jsonify({
+            "error": str(e),
+            "points": [],
+            "clusters": [],
+            "titles": [],
+            "topics": {},
+            "chats_with_reflections": []
+        }), 500
 
 # ---------------------------------------------------------------------------
 #  Chat management

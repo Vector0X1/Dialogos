@@ -6,11 +6,13 @@ import os
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
+import numpy as np
 from models import ProcessingTask
 import traceback
 from config import CHATGPT_DATA_DIR, CLAUDE_DATA_DIR
 from services.data_processing import process_chatgpt_messages, process_claude_messages, save_state, save_latest_state, process_data_by_month
-
+from services.embedding import get_embeddings
+from services.clustering import perform_clustering, generate_cluster_metadata
 
 class BackgroundProcessor:
     def __init__(self):
@@ -65,12 +67,12 @@ class BackgroundProcessor:
                     df = pd.DataFrame(messages)
                     df["month_year"] = df["timestamp"].dt.strftime("%Y-%m")
 
-                    total_months = len(df["month_year"].unique())
-                    current_month = 0
+                    total_steps = len(df["month_year"].unique()) + 3  # +3 for embedding, clustering, and saving
+                    current_step = 0
 
                     for update in process_data_by_month(df):
-                        current_month += 1
-                        task.progress = (current_month / total_months) * 100
+                        current_step += 1
+                        task.progress = (current_step / total_steps) * 100
 
                         # Save state and files
                         save_state(update, update["month_year"], task.data_dir)
@@ -95,6 +97,41 @@ class BackgroundProcessor:
 
                         # Update latest state files
                         save_latest_state(update, task.data_dir)
+
+                    # Step: Generate embeddings for visualization
+                    current_step += 1
+                    task.progress = (current_step / total_steps) * 100
+                    texts = df["text"].tolist()
+                    embeddings = get_embeddings(texts)
+                    if not embeddings:
+                        raise Exception("Failed to generate embeddings")
+                    # For simplicity, treat embeddings as 2D (in practice, apply t-SNE or UMAP for dimensionality reduction)
+                    embeddings_2d = np.array(embeddings).tolist()  # Placeholder: real apps would reduce dimensions here
+
+                    # Step: Perform clustering
+                    current_step += 1
+                    task.progress = (current_step / total_steps) * 100
+                    # Compute distance matrix for clustering
+                    distance_matrix = np.array([[np.linalg.norm(np.array(e1) - np.array(e2)) for e1 in embeddings] for e2 in embeddings])
+                    clusters = perform_clustering(distance_matrix, len(embeddings))
+
+                    # Step: Generate cluster metadata and save files
+                    current_step += 1
+                    task.progress = (current_step / total_steps) * 100
+                    chat_titles = df["chat_name"].tolist()
+                    cluster_metadata = generate_cluster_metadata(clusters, chat_titles, distance_matrix)
+
+                    # Save visualization files
+                    with open(os.path.join(task.data_dir, "embeddings_2d.json"), "w") as f:
+                        json.dump(embeddings_2d, f)
+                    with open(os.path.join(task.data_dir, "clusters.json"), "w") as f:
+                        json.dump(clusters.tolist(), f)
+                    with open(os.path.join(task.data_dir, "topics.json"), "w") as f:
+                        json.dump(cluster_metadata, f)
+                    with open(os.path.join(task.data_dir, "chat_titles.json"), "w") as f:
+                        json.dump(chat_titles, f)
+                    with open(os.path.join(task.data_dir, "chats_with_reflections.json"), "w") as f:
+                        json.dump([], f)  # Placeholder for reflections
 
                     task.completed = True
                     task.status = "completed"

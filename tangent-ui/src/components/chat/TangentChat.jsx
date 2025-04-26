@@ -241,10 +241,22 @@ const TangentChat = ({
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const response = await fetch('http://localhost:11434/api/tags');
+        const response = await fetch('https://open-i0or.onrender.com/api/tags');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
+        
+        // Log the response for debugging
+        console.log('API Response from /api/tags:', data);
+  
+        // Validate that data.models exists and is an array
+        if (!data || !Array.isArray(data.models)) {
+          throw new Error('Invalid response: Expected data.models to be an array');
+        }
+  
         setModels(data.models);
-
+  
         // Check if a model is already stored in localStorage
         const savedModel = localStorage.getItem('selectedModel');
         if (savedModel && data.models.some(model => model.name === savedModel)) {
@@ -258,6 +270,8 @@ const TangentChat = ({
         }
       } catch (error) {
         console.error('Error fetching models:', error);
+        setModels([]); // Fallback to empty array to prevent crashes
+        setSelectedModel(''); // Reset selected model
       }
     };
     fetchModels();
@@ -401,7 +415,7 @@ const TangentChat = ({
         .join('\n');
 
       // 3) Send request
-      const response = await fetch('http://localhost:11434/api/generate', {
+      const response = await fetch('https://open-i0or.onrender.com/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
