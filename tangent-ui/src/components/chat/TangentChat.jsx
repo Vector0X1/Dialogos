@@ -212,7 +212,7 @@ const TangentChat = ({
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const response = await fetch('http://localhost:11434/api/tags');
+        const response = await fetch('https://open-i0or.onrender.com/api/tags');
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -235,7 +235,7 @@ const TangentChat = ({
         setModels([]);
         alert(
           'Failed to load available models. This might be due to an ad blocker or browser extension blocking the request. ' +
-          'Please disable ad blockers, try Incognito Mode, or ensure the local server (Ollama) is running on http://localhost:11434. ' +
+          'Please disable ad blockers, try Incognito Mode, or ensure the local server (Ollama) is running on https://open-i0or.onrender.com. ' +
           'Falling back to a default model.'
         );
       }
@@ -362,7 +362,7 @@ const TangentChat = ({
         .map(msg => `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`)
         .join('\n');
 
-      let apiUrl = models.length > 0 ? 'http://localhost:11434/api/generate' : 'https://open-i0or.onrender.com/api/generate';
+      let apiUrl = models.length > 0 ? 'https://open-i0or.onrender.com/api/generate' : 'https://open-i0or.onrender.com/api/generate';
       let payload;
 
       if (models.length > 0) {
@@ -524,7 +524,7 @@ const TangentChat = ({
         } catch (fallbackError) {
           errorMessage = 'Request to the local server was blocked, and the fallback server also failed. ' +
                          'This might be due to an ad blocker or browser extension. ' +
-                         'Please disable ad blockers, try Incognito Mode, or ensure the local server (Ollama) is running on http://localhost:11434.';
+                         'Please disable ad blockers, try Incognito Mode, or ensure the local server (Ollama) is running on https://open-i0or.onrender.com.';
         }
       }
 

@@ -19,7 +19,7 @@ const ChatUI = ({ topic, model, onBack }) => {
     setLoading(true);
 
     try {
-      let apiUrl = useFallback ? "https://open-i0or.onrender.com/api/generate" : "http://localhost:11434/api/chat";
+      let apiUrl = useFallback ? "https://open-i0or.onrender.com/api/generate" : "https://open-i0or.onrender.com/api/chat";
       let payload = useFallback
         ? { prompt: newMessages.map(msg => `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`).join('\n') + '\n\nHuman: ' + input + '\n\nAssistant:', model: model || "gpt-4o-mini" }
         : { model: model || "qwen2.5-coder:7b", messages: newMessages, stream: false };
@@ -78,7 +78,7 @@ const ChatUI = ({ topic, model, onBack }) => {
         } catch (fallbackError) {
           errorMessage = "Request to the local server was blocked, and the fallback server also failed. " +
                          "This might be due to an ad blocker or browser extension. " +
-                         "Please disable ad blockers, try Incognito Mode, or ensure the local server (Ollama) is running on http://localhost:11434.";
+                         "Please disable ad blockers, try Incognito Mode, or ensure the local server (Ollama) is running on https://open-i0or.onrender.com.";
         }
       }
 
