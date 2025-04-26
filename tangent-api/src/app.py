@@ -11,8 +11,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-# Restrict CORS to specific origins for security
-CORS(app, resources={r"/api/*": {"origins": ["https://open-lac-six.vercel.app", "http://localhost:3000"]}})
+
+# Configure CORS globally for all routes
+CORS(app, resources={
+    r"/*": {  # Apply to all routes
+        "origins": ["https://open-lac-six.vercel.app", "http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True  # If you need to support cookies or auth headers
+    }
+})
 
 app.register_blueprint(api_bp, url_prefix="/api")
 
@@ -22,32 +30,24 @@ def health():
     logger.info("Health check requested")
     return jsonify({"status": "OK"}), 200
 
+# Remove before_request handler as Flask-CORS handles OPTIONS requests
 @app.before_request
 def before_request():
-    if request.method == "OPTIONS":
-        logger.info("Handling OPTIONS preflight request")
-        response = jsonify({"status": "OK"})
-        response.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin"))
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE")
-        return response, 200
     logger.info(f"Incoming request: {request.path} {request.method}")
     logger.info(f"Headers: {dict(request.headers)}")
 
+# Keep logging but remove manual CORS header addition
 @app.after_request
 def after_request(response):
-    origin = request.headers.get("Origin")
-    if origin in ["https://open-lac-six.vercel.app", "http://localhost:3000"]:
-        response.headers.add("Access-Control-Allow-Origin", origin)
     logger.info(f"Outgoing response: {response.status_code}")
     logger.info(f"Headers: {dict(response.headers)}")
     return response
 
+# Update error handler to avoid adding CORS headers manually
 @app.errorhandler(Exception)
 def handle_exception(e):
     logger.error(f"Unhandled exception: {str(e)}")
     response = jsonify({"error": "Internal server error"})
-    response.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin"))
     return response, 500
 
 if __name__ == "__main__":

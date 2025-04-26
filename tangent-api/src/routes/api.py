@@ -9,16 +9,15 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from flask import Flask, Blueprint, jsonify, request
-from flask_cors import CORS
 from openai import OpenAI
-import logging  # Added for logging
+import logging
 
 from services.embedding import get_embeddings
 from services.background_processor import BackgroundProcessor
 from services.data_processing import analyze_branches
 from services.topic_generation import generate_topic_for_cluster
 from utils import load_visualization_data
-from config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR, GENERATION_MODEL  # Added GENERATION_MODEL
+from config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR, GENERATION_MODEL
 from shared_data import models_data
 
 # Set up logging
@@ -27,22 +26,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Configure CORS with a single origin
-CORS(app, resources={
-    r"/api/*": {
-        "origins": "https://open-lac-six.vercel.app",  # Single origin
-        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
-
-# Explicitly handle CORS headers for all responses
-@app.after_request
-def add_cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = 'https://open-lac-six.vercel.app'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-    return response
+# CORS configuration is now handled in app.py, so no need to configure it here
 
 api_bp = Blueprint("api", __name__)
 background_processor = BackgroundProcessor()
@@ -123,7 +107,6 @@ def generate_topic():
         titles = data.get("titles", [])
         if not titles:
             return jsonify({"error": "No titles provided"}), 400
-        # Fix the typo: `tiles` to `titles`
         topic = generate_topic_for_cluster(titles)
         return jsonify({"topic": topic})
     except Exception as e:
