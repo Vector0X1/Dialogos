@@ -1563,8 +1563,11 @@ export default function PreviewComponent() {
     containerWidth={getChatContainerWidth()}
     onSizeChange={setChatContainerSize}
     isPanelCollapsed={isPanelCollapsed}
+    input={inputValue}            {/* <-- ADD THIS */}
+    onInputChange={handleInputChange}  {/* <-- ADD THIS */}
   />
 </ChatContainer>
+
 
     </div>
   );
