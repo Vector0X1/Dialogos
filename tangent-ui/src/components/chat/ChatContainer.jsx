@@ -33,17 +33,14 @@ const ChatContainer = ({ children, className }) => {
 
   // Split children into ModelStatus and other components
   const childrenArray = React.Children.toArray(children);
-const modelStatus = childrenArray[0];
-const otherChildren = childrenArray.slice(1);
+  const modelStatus = childrenArray[0];
+  const otherChildren = childrenArray.slice(1);
 
-// Clone ModelStatus only if it exists
-const enhancedModelStatus = modelStatus
-  ? React.cloneElement(modelStatus, {
-      containerWidth,
-      className: "w-full"
-    })
-  : null;
-
+  // Clone ModelStatus with containerWidth prop
+  const enhancedModelStatus = React.cloneElement(modelStatus, {
+    containerWidth,
+    className: "w-full" // Ensure ModelStatus takes full width
+  });
 
   return (
     <div 
