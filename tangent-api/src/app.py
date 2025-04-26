@@ -1,13 +1,19 @@
+import os
+import sys
+import logging
+import threading
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
+# Add project root to Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from src.routes.api import api_bp
 from src.utils import ensure_directories
 from src.services.background_processor import BackgroundProcessor
-import os
-import json
-import threading
-import time
-import logging
 from src.config import BASE_DATA_DIR, IN_MEMORY_MESSAGES
 
 # Set up logging for Render debugging
@@ -80,29 +86,8 @@ if __name__ == "__main__":
         port = int(os.environ.get("PORT", 5001))
         if os.environ.get("RENDER"):
             logger.info("Running on Render with gunicorn")
-            import gunicorn.app.base
-
-            class StandaloneApplication(gunicorn.app.base.BaseApplication):
-                def __init__(self, app, options=None):
-                    self.options = options or {}
-                    self.application = app
-                    super().__init__()
-
-                def load_config(self):
-                    config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
-                    for key, value in config.items():
-                        self.cfg.set(key.lower(), value)
-
-                def load(self):
-                    return self.application
-
-            options = {
-                "bind": f"0.0.0.0:{port}",
-                "workers": 1,
-                "worker_class": "sync",
-                "timeout": 120,
-            }
-            StandaloneApplication(app, options).run()
+            # Gunicorn is run via Render's start command
+            app.run(host="0.0.0.0", port=port)
         else:
             logger.info("Running in development mode")
             app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
