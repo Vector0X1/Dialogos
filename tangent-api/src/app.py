@@ -25,7 +25,7 @@ app = Flask(__name__)
 # Configure CORS globally for all routes
 CORS(app, resources={
     r"/*": {
-        "origins": ["https://open-lac-six.vercel.app", "http://localhost:3000"],
+        "origins": ["https://open-l confounders-six.vercel.app", "http://localhost:3000"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
@@ -86,7 +86,6 @@ if __name__ == "__main__":
         port = int(os.environ.get("PORT", 5001))
         if os.environ.get("RENDER"):
             logger.info("Running on Render with gunicorn")
-            # Gunicorn is run via Render's start command
             app.run(host="0.0.0.0", port=port)
         else:
             logger.info("Running in development mode")
