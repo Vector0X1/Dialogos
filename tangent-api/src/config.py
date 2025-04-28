@@ -9,7 +9,7 @@ CLAUDE_DATA_DIR = os.path.join(BASE_DATA_DIR, "claude")
 # In-memory message storage
 IN_MEMORY_MESSAGES = {"chatgpt": [], "claude": []}
 
-# Placeholder for models data (used in api.py)
+# Models data for /models/library endpoint
 models_data = [
     {"name": "chatgpt", "type": "generation"},
     {"name": "claude", "type": "generation"}

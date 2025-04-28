@@ -1,17 +1,16 @@
+# src/services/data_processing.py
 import json
 import os
 import traceback
 import numpy as np
 import pandas as pd
-from collections import defaultdict 
-from scipy.spatial.distance import pdist, squareform  # Move import here to be explicit
+from collections import defaultdict
+from scipy.spatial.distance import pdist, squareform
 import umap
-from config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR
+from src.config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR  # Updated import
 from typing import List, Tuple
-from services.embedding import get_embeddings
-from scipy.spatial.distance import squareform
-from services.clustering import perform_clustering, generate_cluster_metadata
-
+from src.services.embedding import get_embeddings  # Updated import
+from src.services.clustering import perform_clustering, generate_cluster_metadata  # Updated import
 
 def save_state(state_data, month_year, data_dir):
     """Save a specific state with timestamp to the appropriate directory"""
@@ -32,7 +31,6 @@ def save_state(state_data, month_year, data_dir):
             f,
         )
 
-
 def save_latest_state(update, data_dir):
     """Save the latest state files to the appropriate directory"""
     with open(os.path.join(data_dir, "embeddings_2d.json"), "w") as f:
@@ -43,7 +41,6 @@ def save_latest_state(update, data_dir):
         json.dump(update["topics"], f)
     with open(os.path.join(data_dir, "chat_titles.json"), "w") as f:
         json.dump(update["titles"], f)
-
 
 def process_claude_messages(data: List[dict]) -> List[dict]:
     messages = []
@@ -114,7 +111,6 @@ def process_claude_messages(data: List[dict]) -> List[dict]:
 
     return processed_messages
 
-
 def process_chatgpt_messages(data: List[dict]) -> List[dict]:
     messages = []
     for conversation in data:
@@ -170,7 +166,6 @@ def process_chatgpt_messages(data: List[dict]) -> List[dict]:
 
     return messages
 
-
 def traverse_tree(
     node: dict,
     conv_title: str,
@@ -217,7 +212,6 @@ def traverse_tree(
     except (ValueError, TypeError) as e:
         print(f"Error processing message: {e}")
 
-
 def identify_struggle_messages(df: pd.DataFrame) -> pd.DataFrame:
     struggle_keywords = [
         "I'm struggling with",
@@ -238,7 +232,6 @@ def identify_struggle_messages(df: pd.DataFrame) -> pd.DataFrame:
     pattern = "|".join(struggle_keywords)
     struggle_df = df[df["text"].str.contains(pattern, case=False, na=False)]
     return struggle_df
-
 
 def detect_chat_type(file_path: str) -> Tuple[str, str]:
     """
@@ -266,7 +259,6 @@ def detect_chat_type(file_path: str) -> Tuple[str, str]:
 
     except Exception as e:
         raise Exception(f"Error detecting chat type: {str(e)}")
-
 
 def process_data_by_month(df):
     """Process data month by month and yield updates."""
@@ -324,7 +316,6 @@ def process_data_by_month(df):
         traceback.print_exc()
         raise Exception(f"Error in process_data_by_month: {str(e)}")
 
-
 def process_single_month(chat_titles, month):
     try:
         print(f"Starting processing for month {month} with {len(chat_titles)} chats")
@@ -366,6 +357,7 @@ def process_single_month(chat_titles, month):
     except Exception as e:
         print(f"Error processing single month: {str(e)}")
         return None
+
 def analyze_branches(messages):
     """
     Enhanced branch detection that specifically looks for edited message branches
