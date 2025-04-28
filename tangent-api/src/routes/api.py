@@ -8,7 +8,7 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from openai import OpenAI
 import logging
 
@@ -17,7 +17,7 @@ from src.services.background_processor import BackgroundProcessor
 from src.services.data_processing import analyze_branches
 from src.services.topic_generation import generate_topic_for_cluster
 from src.utils import load_visualization_data
-from src.config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR, IN_MEMORY_MESSAGES, models_data  # Updated import
+from src.config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR, IN_MEMORY_MESSAGES, models_data
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -29,11 +29,27 @@ background_processor = BackgroundProcessor()
 # In-memory store for chats
 IN_MEMORY_CHATS = {}
 
+# Middleware to ensure CORS headers are added to all responses
+@api_bp.after_request
+def add_cors_headers(response):
+    origin = request.headers.get("Origin", "*")
+    allowed_origins = ["https://open-l confounders-six.vercel.app", "http://localhost:3000", "http://localhost:3001"]
+    if origin in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    else:
+        response.headers["Access-Control-Allow-Origin"] = "null"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Max-Age"] = "86400"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
 @api_bp.route("/generate", methods=["POST"])
 def generate_text():
     """Generate a response using OpenAI's ChatGPT API and store in IN_MEMORY_MESSAGES."""
     logger.info("Received request to /api/generate")
     data = request.json
+    logger.debug(f"Request data: {data}")
     prompt = data.get("prompt", "")
     logger.info(f"Prompt received: {prompt}")
     if not prompt:
@@ -82,120 +98,179 @@ def generate_text():
                 "sender": "assistant"
             }
         ])
+        logger.debug(f"Updated IN_MEMORY_MESSAGES: {len(IN_MEMORY_MESSAGES['chatgpt'])} messages")
 
         # Trigger background processing
+        logger.info("Triggering background processing")
         background_processor.start_task()
 
+        logger.info("Returning response to client")
         return jsonify({"response": response_text})
 
     except Exception as e:
-        logger.error(f"Error in OpenAI API call: {str(e)}")
+        logger.error(f"Error in OpenAI API call: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/process", methods=["POST"])
 def process_data():
     """Process uploaded chat data file (fallback for manual uploads)."""
     try:
+        logger.info("Received request to /api/process")
         if "file" not in request.files:
+            logger.warning("No file uploaded in request")
             return jsonify({"error": "No file uploaded"}), 400
         file = request.files["file"]
         if not file.filename.endswith(".json"):
+            logger.warning(f"Invalid file type: {file.filename}")
             return jsonify({"error": "Invalid file type"}), 400
         
         chat_type = request.args.get("type", "chatgpt")
         if chat_type not in IN_MEMORY_MESSAGES:
+            logger.warning(f"Invalid chat type: {chat_type}")
             return jsonify({"error": "Invalid chat type"}), 400
         
         # Save file temporarily
         temp_dir = os.path.join(BASE_DATA_DIR, "temp")
+        logger.info(f"Creating temp directory: {temp_dir}")
         os.makedirs(temp_dir, exist_ok=True)
         file_path = os.path.join(temp_dir, f"{time.time()}.json")
+        logger.info(f"Saving file to: {file_path}")
         file.save(file_path)
         
         # Start background task
+        logger.info("Starting background task")
         task_id = background_processor.start_task(file_path)
+        logger.info(f"Background task started with ID: {task_id}")
         return jsonify({"task_id": task_id, "message": "Processing started"}), 202
     except Exception as e:
-        logger.error(f"Error processing file: {str(e)}")
+        logger.error(f"Error processing file: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/process/status/<task_id>", methods=["GET"])
 def check_task_status(task_id):
     """Check the status of a processing task."""
-    status = background_processor.get_task_status(task_id)
-    if status:
-        return jsonify({
-            "status": status.status,
-            "progress": status.progress,
-            "error": status.error,
-            "completed": status.completed,
-        })
-    return jsonify({"error": "Task not found"}), 404
+    logger.info(f"Received request to /api/process/status/{task_id}")
+    try:
+        status = background_processor.get_task_status(task_id)
+        if status:
+            logger.info(f"Task status for {task_id}: {status.status}")
+            return jsonify({
+                "status": status.status,
+                "progress": status.progress,
+                "error": status.error,
+                "completed": status.completed,
+            })
+        logger.warning(f"Task not found: {task_id}")
+        return jsonify({"error": "Task not found"}), 404
+    except Exception as e:
+        logger.error(f"Error checking task status: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/get-reflections", methods=["POST"])
 def get_reflections():
     """Placeholder for reflections."""
+    logger.info("Received request to /api/get-reflections")
     try:
         chat_type = request.args.get("type", "chatgpt")
         current_context = request.json.get("context", "")
         if not current_context:
+            logger.info("No context provided, returning empty reflections")
             return jsonify({"reflections": []})
+        logger.info("Generating embeddings for context")
         ctx_emb = np.array(get_embeddings([current_context])[0]).flatten()
+        logger.info("Returning placeholder reflections")
         return jsonify({"reflections": []})
     except Exception as e:
-        logger.error(f"Error getting reflections: {str(e)}")
+        logger.error(f"Error getting reflections: {str(e)}", exc_info=True)
         return jsonify({"reflections": []})
 
 @api_bp.route("/topics", methods=["GET"])
 def get_topics():
     """Return available topics."""
+    logger.info("Received request to /api/topics")
     return jsonify({"topics": []})
 
 @api_bp.route("/topics/generate", methods=["POST"])
 def generate_topic():
     """Generate a topic for a cluster of titles."""
+    logger.info("Received request to /api/topics/generate")
     try:
         data = request.json
+        logger.debug(f"Request data: {data}")
         titles = data.get("titles", [])
         if not titles:
+            logger.warning("No titles provided")
             return jsonify({"error": "No titles provided"}), 400
+        logger.info(f"Generating topic for {len(titles)} titles")
         topic = generate_topic_for_cluster(titles)
+        logger.info(f"Generated topic: {topic}")
         return jsonify({"topic": topic})
     except Exception as e:
-        logger.error(f"Error generating topic: {str(e)}")
+        logger.error(f"Error generating topic: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/models/library", methods=["GET"])
 def get_library_models():
     """Return available models."""
-    if not models_data:
-        return jsonify({"error": "Models data not yet loaded"}), 503
-    return jsonify({"models": models_data})
+    logger.info("Received request to /api/models/library")
+    try:
+        if not models_data:
+            logger.warning("Models data not yet loaded")
+            return jsonify({"error": "Models data not yet loaded"}), 503
+        logger.info(f"Returning {len(models_data)} models")
+        return jsonify({"models": models_data})
+    except Exception as e:
+        logger.error(f"Error fetching models: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/models", methods=["GET"])
 def get_models():
     """Return current model configuration."""
-    return jsonify({
-        "generation_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        "embedding_model": os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002"),
-    })
+    logger.info("Received request to /api/models")
+    try:
+        models_config = {
+            "generation_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            "embedding_model": os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002"),
+        }
+        logger.info(f"Returning models config: {models_config}")
+        return jsonify(models_config)
+    except Exception as e:
+        logger.error(f"Error fetching models config: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/tags", methods=["GET"])
 def get_tags():
     """Return available tags (placeholder)."""
-    return jsonify([])
+    logger.info("Received request to /api/tags")
+    try:
+        logger.info("Returning placeholder tags")
+        return jsonify([])
+    except Exception as e:
+        logger.error(f"Error fetching tags: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/embeddings", methods=["POST"])
 def embeddings():
     """Generate embeddings for provided texts."""
-    return jsonify({"embeddings": get_embeddings(request.json.get("texts", []))})
+    logger.info("Received request to /api/embeddings")
+    try:
+        texts = request.json.get("texts", [])
+        logger.info(f"Generating embeddings for {len(texts)} texts")
+        embeddings_data = get_embeddings(texts)
+        logger.info("Returning embeddings")
+        return jsonify({"embeddings": embeddings_data})
+    except Exception as e:
+        logger.error(f"Error generating embeddings: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/visualization", methods=["GET"])
 def get_visualization_data():
     """Serve visualization data for the frontend."""
+    logger.info("Received request to /api/visualization")
     try:
         chat_type = request.args.get("type", "chatgpt")
         if chat_type not in ["chatgpt", "claude"]:
+            logger.warning(f"Invalid chat type: {chat_type}")
             return jsonify({"error": "Invalid chat type"}), 400
 
         data_dir = CHATGPT_DATA_DIR if chat_type == "chatgpt" else CLAUDE_DATA_DIR
@@ -223,7 +298,7 @@ def get_visualization_data():
         return jsonify(visualization_data)
 
     except Exception as e:
-        logger.error(f"Error fetching visualization data: {str(e)}")
+        logger.error(f"Error fetching visualization data: {str(e)}", exc_info=True)
         return jsonify({
             "error": str(e),
             "points": [],
@@ -236,8 +311,10 @@ def get_visualization_data():
 @api_bp.route("/chats/save", methods=["POST"])
 def save_chat():
     """Save chat data."""
+    logger.info("Received request to /api/chats/save")
     try:
         data = request.json
+        logger.debug(f"Request data: {data}")
         chat_id = data.get("chatId", str(datetime.now().timestamp()))
         chat_data = {
             "id": chat_id,
@@ -247,29 +324,34 @@ def save_chat():
             "metadata": data.get("metadata", {}),
         }
         IN_MEMORY_CHATS[chat_id] = chat_data
+        logger.info(f"Saved chat with ID: {chat_id}")
         return jsonify({
             "success": True,
             "chatId": chat_id,
             "message": "Chat saved successfully"
         })
     except Exception as e:
-        logger.error(f"Error saving chat: {str(e)}")
+        logger.error(f"Error saving chat: {str(e)}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 @api_bp.route("/chats/load/<chat_id>", methods=["GET"])
 def load_chat(chat_id):
     """Load chat data."""
+    logger.info(f"Received request to /api/chats/load/{chat_id}")
     try:
         if chat_id not in IN_MEMORY_CHATS:
+            logger.warning(f"Chat not found: {chat_id}")
             return jsonify({"success": False, "error": "Chat not found"}), 404
+        logger.info(f"Loaded chat with ID: {chat_id}")
         return jsonify({"success": True, "data": IN_MEMORY_CHATS[chat_id]})
     except Exception as e:
-        logger.error(f"Error loading chat: {str(e)}")
+        logger.error(f"Error loading chat: {str(e)}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 @api_bp.route("/chats/list", methods=["GET"])
 def list_chats():
     """List all chats."""
+    logger.info("Received request to /api/chats/list")
     try:
         chats = []
         for chat_id, chat_data in IN_MEMORY_CHATS.items():
@@ -279,32 +361,38 @@ def list_chats():
                 "lastModified": chat_data.get("lastModified"),
                 "metadata": chat_data.get("metadata", {}),
             })
+        logger.info(f"Returning {len(chats)} chats")
         return jsonify({
             "success": True,
             "chats": sorted(chats, key=lambda x: x["lastModified"], reverse=True),
         })
     except Exception as e:
-        logger.error(f"Error listing chats: {str(e)}")
+        logger.error(f"Error listing chats: {str(e)}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 @api_bp.route("/chats/delete/<chat_id>", methods=["DELETE"])
 def delete_chat(chat_id):
     """Delete a chat."""
+    logger.info(f"Received request to /api/chats/delete/{chat_id}")
     try:
         if chat_id not in IN_MEMORY_CHATS:
+            logger.warning(f"Chat not found: {chat_id}")
             return jsonify({"success": False, "error": "Chat not found"}), 404
         del IN_MEMORY_CHATS[chat_id]
+        logger.info(f"Deleted chat with ID: {chat_id}")
         return jsonify({"success": True, "message": "Chat deleted successfully"})
     except Exception as e:
-        logger.error(f"Error deleting chat: {str(e)}")
+        logger.error(f"Error deleting chat: {str(e)}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 @api_bp.route("/messages/<path:chat_name>", methods=["GET"])
 def get_chat_messages(chat_name):
     """Retrieve messages for a specific chat and branch."""
+    logger.info(f"Received request to /api/messages/{chat_name}")
     try:
         chat_type = request.args.get("type", "chatgpt")
         if chat_type not in IN_MEMORY_MESSAGES:
+            logger.warning(f"Invalid chat type: {chat_type}")
             return jsonify({"error": "Invalid chat type"}), 400
         
         all_messages = IN_MEMORY_MESSAGES[chat_type]
@@ -321,19 +409,23 @@ def get_chat_messages(chat_name):
             if msg.get("chat_name") == base_chat_name and msg.get("branch_id", "0") == branch_id
         ]
         if not chat_messages:
+            logger.warning(f"No messages found for chat: {chat_name}")
             return jsonify({"error": f"No messages found for chat: {chat_name}"}), 404
         chat_messages.sort(key=lambda x: pd.to_datetime(x.get("timestamp", "0")))
+        logger.info(f"Returning {len(chat_messages)} messages for chat: {chat_name}")
         return jsonify({"messages": chat_messages})
     except Exception as e:
-        logger.error(f"Error retrieving messages: {str(e)}")
+        logger.error(f"Error retrieving messages: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/messages_all/<path:chat_name>", methods=["GET"])
 def get_all_chat_messages(chat_name):
     """Retrieve all branches for a chat."""
+    logger.info(f"Received request to /api/messages_all/{chat_name}")
     try:
         chat_type = request.args.get("type", "chatgpt")
         if chat_type not in IN_MEMORY_MESSAGES:
+            logger.warning(f"Invalid chat type: {chat_type}")
             return jsonify({"error": "Invalid chat type"}), 400
         
         all_messages = IN_MEMORY_MESSAGES[chat_type]
@@ -347,6 +439,7 @@ def get_all_chat_messages(chat_name):
             msg for msg in all_messages if msg.get("chat_name") == base_chat_name
         ]
         if not chat_messages:
+            logger.warning(f"No messages found for chat: {chat_name}")
             return jsonify({"error": f"No messages found for chat: {chat_name}"}), 404
         
         branches = defaultdict(list)
@@ -356,21 +449,25 @@ def get_all_chat_messages(chat_name):
         
         for branch_msgs in branches.values():
             branch_msgs.sort(key=lambda x: pd.to_datetime(x.get("timestamp", "0")))
+        logger.info(f"Returning branches for chat: {chat_name}")
         return jsonify({"branches": dict(branches)})
     except Exception as e:
-        logger.error(f"Error retrieving messages: {str(e)}")
+        logger.error(f"Error retrieving messages: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/messages/branched", methods=["GET"])
 def get_branched_messages():
     """Retrieve branched chat structure."""
+    logger.info("Received request to /api/messages/branched")
     try:
         chat_type = request.args.get("type", "chatgpt")
         if chat_type not in IN_MEMORY_MESSAGES:
+            logger.warning(f"Invalid chat type: {chat_type}")
             return jsonify({"error": "Invalid chat type"}), 400
 
         messages = IN_MEMORY_MESSAGES[chat_type]
         if not messages:
+            logger.info("No messages available")
             return jsonify({
                 "branched_chats": {},
                 "stats": {
@@ -443,22 +540,26 @@ def get_branched_messages():
                         "time_gaps": []
                     }
 
+        logger.info("Returning branched chat structure")
         return jsonify({
             "branched_chats": branched_chats,
             "stats": stats
         })
 
     except Exception as e:
-        logger.error(f"Error processing branched messages: {str(e)}")
+        logger.error(f"Error processing branched messages: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/messages/add", methods=["POST"])
 def add_message():
     """Add a message to IN_MEMORY_MESSAGES."""
+    logger.info("Received request to /api/messages/add")
     try:
         data = request.json
+        logger.debug(f"Request data: {data}")
         chat_type = data.get("type", "chatgpt")
         if chat_type not in IN_MEMORY_MESSAGES:
+            logger.warning(f"Invalid chat type: {chat_type}")
             return jsonify({"error": "Invalid chat type"}), 400
 
         chat_name = data.get("chat_name")
@@ -469,6 +570,7 @@ def add_message():
         parent_message = data.get("parent_message", None)
 
         if not all([chat_name, message_id, text]):
+            logger.warning("Missing required fields (chat_name, message_id, text)")
             return jsonify({"error": "Missing required fields (chat_name, message_id, text)"}), 400
 
         existing_message = next(
@@ -494,46 +596,86 @@ def add_message():
         logger.info(f"Message added: {new_message}")
 
         # Trigger background processing
+        logger.info("Triggering background processing")
         background_processor.start_task()
 
+        logger.info("Message added successfully")
         return jsonify({"success": True, "message": "Message added successfully"})
     except Exception as e:
-        logger.error(f"Error in add_message: {str(e)}")
+        logger.error(f"Error in add_message: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/messages/raw", methods=["GET"])
 def get_raw_messages():
     """Return all raw messages for a chat type."""
-    chat_type = request.args.get("type", "chatgpt")
-    if chat_type not in IN_MEMORY_MESSAGES:
-        return jsonify({"error": "Invalid chat type"}), 400
-    return jsonify(IN_MEMORY_MESSAGES[chat_type])
+    logger.info("Received request to /api/messages/raw")
+    try:
+        chat_type = request.args.get("type", "chatgpt")
+        if chat_type not in IN_MEMORY_MESSAGES:
+            logger.warning(f"Invalid chat type: {chat_type}")
+            return jsonify({"error": "Invalid chat type"}), 400
+        logger.info(f"Returning raw messages for chat type: {chat_type}")
+        return jsonify(IN_MEMORY_MESSAGES[chat_type])
+    except Exception as e:
+        logger.error(f"Error retrieving raw messages: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/messages/clear", methods=["POST"])
 def clear_messages():
     """Clear all messages for a chat type."""
-    chat_type = request.json.get("type", "chatgpt")
-    if chat_type not in IN_MEMORY_MESSAGES:
-        return jsonify({"error": "Invalid chat type"}), 400
-    IN_MEMORY_MESSAGES[chat_type] = []
-    return jsonify({"success": True, "message": "Messages cleared"})
+    logger.info("Received request to /api/messages/clear")
+    try:
+        chat_type = request.json.get("type", "chatgpt")
+        if chat_type not in IN_MEMORY_MESSAGES:
+            logger.warning(f"Invalid chat type: {chat_type}")
+            return jsonify({"error": "Invalid chat type"}), 400
+        IN_MEMORY_MESSAGES[chat_type] = []
+        logger.info(f"Cleared messages for chat type: {chat_type}")
+        return jsonify({"success": True, "message": "Messages cleared"})
+    except Exception as e:
+        logger.error(f"Error clearing messages: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/content/identify-messages", methods=["POST"])
 def identify_relevant_messages():
     """Placeholder for identifying relevant messages."""
-    return jsonify([])
+    logger.info("Received request to /api/content/identify-messages")
+    try:
+        logger.info("Returning placeholder for relevant messages")
+        return jsonify([])
+    except Exception as e:
+        logger.error(f"Error identifying relevant messages: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/states", methods=["GET"])
 def get_available_states():
     """Return available states (placeholder)."""
-    return jsonify({"states": []})
+    logger.info("Received request to /api/states")
+    try:
+        logger.info("Returning placeholder states")
+        return jsonify({"states": []})
+    except Exception as e:
+        logger.error(f"Error fetching states: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/state/<month_year>", methods=["GET"])
 def get_state(month_year):
     """Return state data (placeholder)."""
-    return jsonify({"error": "State not found"}), 404
+    logger.info(f"Received request to /api/state/{month_year}")
+    try:
+        logger.info("Returning placeholder state data")
+        return jsonify({"error": "State not found"}), 404
+    except Exception as e:
+        logger.error(f"Error fetching state: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/health", methods=["GET"])
 def health_check():
     """Health check endpoint."""
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    logger.info("Received request to /api/health")
+    try:
+        logger.info("Returning health status")
+        return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    except Exception as e:
+        logger.error(f"Error in health check: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
