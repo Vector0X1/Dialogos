@@ -1,8 +1,8 @@
 # src/config.py
 import os
 
-# Base directory for data storage
-BASE_DATA_DIR = os.getenv("BASE_DATA_DIR", "/opt/render/project/data")
+# Use /tmp for ephemeral storage on Render
+BASE_DATA_DIR = os.getenv("BASE_DATA_DIR", "/tmp/data")
 CHATGPT_DATA_DIR = os.path.join(BASE_DATA_DIR, "chatgpt")
 CLAUDE_DATA_DIR = os.path.join(BASE_DATA_DIR, "claude")
 
