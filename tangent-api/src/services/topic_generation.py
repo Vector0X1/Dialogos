@@ -1,16 +1,19 @@
-import requests
 import os
+import time
+from openai import OpenAI
 
-GENERATION_MODEL = os.getenv("GENERATION_MODEL", "qwen2.5-coder:7b")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+GENERATION_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+def generate_topic_for_cluster(messages):
+    """Generate a topic label for a cluster of chat conversation messages"""
+    # Concatenate messages with a separator
+    messages_text = "\n- ".join(messages)
+    prompt = f"""You are a technical topic analyzer. Review the following chat conversation messages and provide a single concise topic label (2-4 words) that best describes their common theme.
 
-def generate_topic_for_cluster(titles):
-    """Generate a topic label for a cluster of titles"""
-    titles_text = "\n".join(f"- {title}" for title in titles)
-    prompt = f"""You are a technical topic analyzer. Review these related titles and provide a single concise topic label (2-4 words) that best describes their common theme.
-
-Titles:
-{titles_text}
+Conversation messages:
+- {messages_text}
 
 Provide ONLY the topic label, nothing else. Examples:
 "Network Security Tools"
@@ -18,27 +21,19 @@ Provide ONLY the topic label, nothing else. Examples:
 "Data Visualization"
 "API Integration"
 """
-
-    payload = {
-        "model": GENERATION_MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"temperature": 0.2},
-    }
-
-    try:
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json=payload,
-            headers={"Content-Type": "application/json"},
-        )
-
-        if response.status_code == 200:
-            topic = response.json().get("response", "").strip()
+    for attempt in range(3):
+        try:
+            response = client.chat.completions.create(
+                model=GENERATION_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2
+            )
+            topic = response.choices[0].message.content.strip()
             return topic if topic else "Miscellaneous"
-        else:
-            print(f"Error: Received status code {response.status_code}")
-            return "Error generating topic"
-    except Exception as e:
-        print(f"Error generating topic: {str(e)}")
-        return "Error"
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(2 ** attempt)  # Exponential backoff
+                continue
+            print(f"Error generating topic: {str(e)}")
+            return "Error"
+    return "Error"

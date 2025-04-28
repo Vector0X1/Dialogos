@@ -9,7 +9,7 @@ from src.utils import logger
 from src.services.data_processing import detect_chat_type, process_chatgpt_messages, process_claude_messages
 from src.services.embedding import get_embeddings
 from src.services.clustering import perform_clustering
-from src.services.topic_generation import generate_topics
+from src.services.topic_generation import generate_topic_for_cluster
 from src.config import BASE_DATA_DIR, IN_MEMORY_MESSAGES
 
 class BackgroundProcessor:
@@ -70,8 +70,21 @@ class BackgroundProcessor:
                 # Clustering
                 clusters = perform_clustering(embeddings, min_cluster_size=max(2, len(embeddings) // 10))
 
-                # Generate topics
-                topics = generate_topics(df, clusters)
+                # Generate topics for each cluster based on conversation content
+                topics = {}
+                for cluster_id in set(clusters):
+                    if cluster_id == -1:  # Skip noise points
+                        continue
+                    # Get messages in this cluster
+                    cluster_indices = [i for i, c in enumerate(clusters) if c == cluster_id]
+                    cluster_messages = df.iloc[cluster_indices]["text"].tolist()
+                    if cluster_messages:
+                        # Sample up to 5 messages or concatenate for brevity
+                        sample_messages = cluster_messages[:5]  # Adjust as needed
+                        topic = generate_topic_for_cluster(sample_messages)
+                        topics[cluster_id] = topic
+                    else:
+                        topics[cluster_id] = "Miscellaneous"
 
                 # Save results
                 output_dir = os.path.join(BASE_DATA_DIR, chat_type)
