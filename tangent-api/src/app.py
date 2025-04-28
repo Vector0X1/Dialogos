@@ -38,6 +38,7 @@ app.register_blueprint(api_bp, url_prefix="/api")
 # Explicitly handle OPTIONS requests for all routes
 @app.route("/<path:path>", methods=["OPTIONS"])
 def handle_options(path):
+    logger.info(f"Handling OPTIONS request for path: {path}")
     response = make_response()
     response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
@@ -60,7 +61,8 @@ def load_in_memory_messages():
             else:
                 logger.info(f"No persisted messages found for {chat_type} at {file_path}")
         except Exception as e:
-            logger.error(f"Error loading messages for {chat_type}: {str(e)}")
+            logger.error(f"Error loading messages for {chat_type}: {str(e)}", exc_info=True)
+            IN_MEMORY_MESSAGES[chat_type] = []  # Fallback to empty list
 
 def periodic_processing():
     """Periodically process in-memory messages to generate visualization data."""
@@ -70,7 +72,7 @@ def periodic_processing():
             task_id = background_processor.start_task()  # No file_path for in-memory
             logger.info(f"Started background task with ID: {task_id}")
         except Exception as e:
-            logger.error(f"Error in periodic processing: {str(e)}")
+            logger.error(f"Error in periodic processing: {str(e)}", exc_info=True)
         time.sleep(300)  # Process every 5 minutes
 
 # Health check endpoint
@@ -86,13 +88,13 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    logger.info(f"Outgoing response: {response.status_code}")
+    logger.infomounted f"Outgoing response: {response.status_code}")
     logger.info(f"Headers: {dict(response.headers)}")
     return response
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    logger.error(f"Unhandled exception: {str(e)}")
+    logger.error(f"Unhandled exception: {str(e)}", exc_info=True)
     response = jsonify({"error": "Internal server error"})
     response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
     return response, 500
@@ -100,12 +102,22 @@ def handle_exception(e):
 if __name__ == "__main__":
     try:
         logger.info("Starting application...")
-        ensure_directories()
-        load_in_memory_messages()
-        processing_thread = threading.Thread(target=periodic_processing, daemon=True)
-        processing_thread.start()
+        try:
+            ensure_directories()
+        except Exception as e:
+            logger.error(f"Failed to ensure directories: {str(e)}", exc_info=True)
+        try:
+            load_in_memory_messages()
+        except Exception as e:
+            logger.error(f"Failed to load in-memory messages: {str(e)}", exc_info=True)
+        try:
+            processing_thread = threading.Thread(target=periodic_processing, daemon=True)
+            processing_thread.start()
+        except Exception as e:
+            logger.error(f"Failed to start periodic processing thread: {str(e)}", exc_info=True)
         port = int(os.environ.get("PORT", 5001))
+        logger.info(f"Starting Flask app on port {port}")
         app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
     except Exception as e:
-        logger.error(f"Application startup failed: {str(e)}")
+        logger.error(f"Application startup failed: {str(e)}", exc_info=True)
         raise

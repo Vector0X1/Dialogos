@@ -2,13 +2,14 @@
 import os
 import json
 import logging
-from src.config import BASE_DATA_DIR, CLAUDE_DATA_DIR, CHATGPT_DATA_DIR  # Updated import
+from src.config import BASE_DATA_DIR, CLAUDE_DATA_DIR, CHATGPT_DATA_DIR
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def check_files_exist(data_dir: str) -> dict:
+    """Check if required files exist in the specified directory."""
     REQUIRED_FILES = [
         "analytics.json",
         "embeddings_2d.json",
@@ -19,29 +20,54 @@ def check_files_exist(data_dir: str) -> dict:
     ]
 
     existing_files = {}
-    for file in REQUIRED_FILES:
-        path = os.path.join(data_dir, file)
-        existing_files[file] = os.path.exists(path)
-    logger.info(f"Checked files in {data_dir}: {existing_files}")
+    try:
+        for file in REQUIRED_FILES:
+            path = os.path.join(data_dir, file)
+            exists = os.path.exists(path)
+            existing_files[file] = exists
+            logger.debug(f"Checked file {path}: exists={exists}")
+        logger.info(f"Checked files in {data_dir}: {existing_files}")
+    except Exception as e:
+        logger.error(f"Error checking files in {data_dir}: {str(e)}", exc_info=True)
+        # Return a default dict with all files marked as missing
+        existing_files = {file: False for file in REQUIRED_FILES}
     return existing_files
 
-def send_progress(step, progress=0):
-    message = f"data: {json.dumps({'type': 'progress', 'step': step, 'progress': progress})}\n\n"
-    logger.info(f"Sending progress: {message}")
-    return message
+def send_progress(step: str, progress: float = 0) -> str:
+    """Send a progress update in SSE format."""
+    try:
+        message = f"data: {json.dumps({'type': 'progress', 'step': step, 'progress': progress})}\n\n"
+        logger.info(f"Sending progress: step={step}, progress={progress}")
+        return message
+    except Exception as e:
+        logger.error(f"Error sending progress: {str(e)}", exc_info=True)
+        # Return a fallback message to avoid breaking the SSE stream
+        return f"data: {json.dumps({'type': 'error', 'message': 'Failed to send progress update'})}\n\n"
 
-def send_error(message):
-    error_message = f"data: {json.dumps({'type': 'error', 'message': message})}\n\n"
-    logger.error(f"Sending error: {error_message}")
-    return error_message
+def send_error(message: str) -> str:
+    """Send an error message in SSE format."""
+    try:
+        error_message = f"data: {json.dumps({'type': 'error', 'message': message})}\n\n"
+        logger.error(f"Sending error: {message}")
+        return error_message
+    except Exception as e:
+        logger.error(f"Error sending error message: {str(e)}", exc_info=True)
+        # Return a fallback message to avoid breaking the SSE stream
+        return f"data: {json.dumps({'type': 'error', 'message': 'Failed to send error message'})}\n\n"
 
-def send_complete():
-    message = f"data: {json.dumps({'type': 'complete'})}\n\n"
-    logger.info("Sending complete message")
-    return message
+def send_complete() -> str:
+    """Send a completion message in SSE format."""
+    try:
+        message = f"data: {json.dumps({'type': 'complete'})}\n\n"
+        logger.info("Sending complete message")
+        return message
+    except Exception as e:
+        logger.error(f"Error sending complete message: {str(e)}", exc_info=True)
+        # Return a fallback message to avoid breaking the SSE stream
+        return f"data: {json.dumps({'type': 'error', 'message': 'Failed to send complete message'})}\n\n"
 
 def ensure_directories():
-    """Ensure all required data directories exist"""
+    """Ensure all required data directories exist."""
     try:
         # Create base data directory
         os.makedirs(BASE_DATA_DIR, exist_ok=True)
@@ -59,12 +85,20 @@ def ensure_directories():
         logger.info(f"Ensured directory: {os.path.join(CLAUDE_DATA_DIR, 'states')}")
         logger.info(f"Ensured directory: {os.path.join(CHATGPT_DATA_DIR, 'states')}")
     except Exception as e:
-        logger.error(f"Error ensuring directories: {str(e)}")
+        logger.error(f"Error ensuring directories: {str(e)}", exc_info=True)
+        # Do not raise an exception; let the app continue with a warning
+        logger.warning("Proceeding without ensuring directories; file operations may fail later")
 
 def load_visualization_data(data_dir: str) -> dict:
     """Load visualization data from the specified directory."""
     try:
-        data = {}
+        data = {
+            "points": [],
+            "clusters": [],
+            "titles": [],
+            "topics": {},
+            "chats_with_reflections": []
+        }
         logger.info(f"Loading visualization data from {data_dir}")
 
         # Load embeddings
@@ -74,7 +108,6 @@ def load_visualization_data(data_dir: str) -> dict:
                 data["points"] = json.load(f)
             logger.info(f"Loaded embeddings from {embeddings_path}")
         else:
-            data["points"] = []
             logger.warning(f"Embeddings file not found at {embeddings_path}")
 
         # Load clusters
@@ -84,7 +117,6 @@ def load_visualization_data(data_dir: str) -> dict:
                 data["clusters"] = json.load(f)
             logger.info(f"Loaded clusters from {clusters_path}")
         else:
-            data["clusters"] = []
             logger.warning(f"Clusters file not found at {clusters_path}")
 
         # Load topics
@@ -94,7 +126,6 @@ def load_visualization_data(data_dir: str) -> dict:
                 data["topics"] = json.load(f)
             logger.info(f"Loaded topics from {topics_path}")
         else:
-            data["topics"] = {}
             logger.warning(f"Topics file not found at {topics_path}")
 
         # Load chat titles (now include branch info)
@@ -104,7 +135,6 @@ def load_visualization_data(data_dir: str) -> dict:
                 data["titles"] = json.load(f)
             logger.info(f"Loaded titles from {titles_path}")
         else:
-            data["titles"] = []
             logger.warning(f"Titles file not found at {titles_path}")
 
         # Load chats with reflections
@@ -114,13 +144,12 @@ def load_visualization_data(data_dir: str) -> dict:
                 data["chats_with_reflections"] = json.load(f)
             logger.info(f"Loaded reflections from {reflections_path}")
         else:
-            data["chats_with_reflections"] = []
             logger.warning(f"Reflections file not found at {reflections_path}")
 
         return data
 
     except Exception as e:
-        logger.error(f"Error loading visualization data: {str(e)}")
+        logger.error(f"Error loading visualization data from {data_dir}: {str(e)}", exc_info=True)
         return {
             "points": [],
             "clusters": [],

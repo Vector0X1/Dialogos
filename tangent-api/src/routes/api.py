@@ -214,14 +214,11 @@ def get_library_models():
     """Return available models."""
     logger.info("Received request to /api/models/library")
     try:
-        if not models_data:
-            logger.warning("Models data not yet loaded")
-            return jsonify({"error": "Models data not yet loaded"}), 503
         logger.info(f"Returning {len(models_data)} models")
-        return jsonify({"models": models_data})
+        return jsonify({"models": models_data if models_data else []})
     except Exception as e:
         logger.error(f"Error fetching models: {str(e)}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"models": [], "error": str(e)}), 500
 
 @api_bp.route("/models", methods=["GET"])
 def get_models():
