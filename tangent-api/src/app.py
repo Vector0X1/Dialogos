@@ -88,7 +88,7 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    logger.infomounted f"Outgoing response: {response.status_code}")
+    logger.info(f"Outgoing response: {response.status_code}")
     logger.info(f"Headers: {dict(response.headers)}")
     return response
 

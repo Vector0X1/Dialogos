@@ -29,7 +29,6 @@ def check_files_exist(data_dir: str) -> dict:
         logger.info(f"Checked files in {data_dir}: {existing_files}")
     except Exception as e:
         logger.error(f"Error checking files in {data_dir}: {str(e)}", exc_info=True)
-        # Return a default dict with all files marked as missing
         existing_files = {file: False for file in REQUIRED_FILES}
     return existing_files
 
@@ -41,7 +40,6 @@ def send_progress(step: str, progress: float = 0) -> str:
         return message
     except Exception as e:
         logger.error(f"Error sending progress: {str(e)}", exc_info=True)
-        # Return a fallback message to avoid breaking the SSE stream
         return f"data: {json.dumps({'type': 'error', 'message': 'Failed to send progress update'})}\n\n"
 
 def send_error(message: str) -> str:
@@ -52,7 +50,6 @@ def send_error(message: str) -> str:
         return error_message
     except Exception as e:
         logger.error(f"Error sending error message: {str(e)}", exc_info=True)
-        # Return a fallback message to avoid breaking the SSE stream
         return f"data: {json.dumps({'type': 'error', 'message': 'Failed to send error message'})}\n\n"
 
 def send_complete() -> str:
@@ -63,30 +60,25 @@ def send_complete() -> str:
         return message
     except Exception as e:
         logger.error(f"Error sending complete message: {str(e)}", exc_info=True)
-        # Return a fallback message to avoid breaking the SSE stream
         return f"data: {json.dumps({'type': 'error', 'message': 'Failed to send complete message'})}\n\n"
 
 def ensure_directories():
     """Ensure all required data directories exist."""
     try:
-        # Create base data directory
         os.makedirs(BASE_DATA_DIR, exist_ok=True)
         logger.info(f"Ensured directory: {BASE_DATA_DIR}")
 
-        # Create chat-specific directories
         os.makedirs(CLAUDE_DATA_DIR, exist_ok=True)
         os.makedirs(CHATGPT_DATA_DIR, exist_ok=True)
         logger.info(f"Ensured directory: {CLAUDE_DATA_DIR}")
         logger.info(f"Ensured directory: {CHATGPT_DATA_DIR}")
 
-        # Create states directories for both chat types
         os.makedirs(os.path.join(CLAUDE_DATA_DIR, "states"), exist_ok=True)
         os.makedirs(os.path.join(CHATGPT_DATA_DIR, "states"), exist_ok=True)
         logger.info(f"Ensured directory: {os.path.join(CLAUDE_DATA_DIR, 'states')}")
         logger.info(f"Ensured directory: {os.path.join(CHATGPT_DATA_DIR, 'states')}")
     except Exception as e:
         logger.error(f"Error ensuring directories: {str(e)}", exc_info=True)
-        # Do not raise an exception; let the app continue with a warning
         logger.warning("Proceeding without ensuring directories; file operations may fail later")
 
 def load_visualization_data(data_dir: str) -> dict:
@@ -101,7 +93,6 @@ def load_visualization_data(data_dir: str) -> dict:
         }
         logger.info(f"Loading visualization data from {data_dir}")
 
-        # Load embeddings
         embeddings_path = os.path.join(data_dir, "embeddings_2d.json")
         if os.path.exists(embeddings_path):
             with open(embeddings_path, "r") as f:
@@ -110,7 +101,6 @@ def load_visualization_data(data_dir: str) -> dict:
         else:
             logger.warning(f"Embeddings file not found at {embeddings_path}")
 
-        # Load clusters
         clusters_path = os.path.join(data_dir, "clusters.json")
         if os.path.exists(clusters_path):
             with open(clusters_path, "r") as f:
@@ -119,7 +109,6 @@ def load_visualization_data(data_dir: str) -> dict:
         else:
             logger.warning(f"Clusters file not found at {clusters_path}")
 
-        # Load topics
         topics_path = os.path.join(data_dir, "topics.json")
         if os.path.exists(topics_path):
             with open(topics_path, "r") as f:
@@ -128,7 +117,6 @@ def load_visualization_data(data_dir: str) -> dict:
         else:
             logger.warning(f"Topics file not found at {topics_path}")
 
-        # Load chat titles (now include branch info)
         titles_path = os.path.join(data_dir, "chat_titles.json")
         if os.path.exists(titles_path):
             with open(titles_path, "r") as f:
@@ -137,7 +125,6 @@ def load_visualization_data(data_dir: str) -> dict:
         else:
             logger.warning(f"Titles file not found at {titles_path}")
 
-        # Load chats with reflections
         reflections_path = os.path.join(data_dir, "chats_with_reflections.json")
         if os.path.exists(reflections_path):
             with open(reflections_path, "r") as f:
