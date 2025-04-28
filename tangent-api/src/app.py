@@ -1,3 +1,4 @@
+# src/app.py
 import os
 import sys
 import logging
@@ -84,12 +85,8 @@ if __name__ == "__main__":
         processing_thread = threading.Thread(target=periodic_processing, daemon=True)
         processing_thread.start()
         port = int(os.environ.get("PORT", 5001))
-        if os.environ.get("RENDER"):
-            logger.info("Running on Render with gunicorn")
-            app.run(host="0.0.0.0", port=port)
-        else:
-            logger.info("Running in development mode")
-            app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
+        # Remove the conditional app.run for Render; Gunicorn handles this
+        app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
     except Exception as e:
         logger.error(f"Application startup failed: {str(e)}")
         raise

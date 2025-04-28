@@ -1,20 +1,16 @@
+# src/config.py
 import os
 
-# Configuration settings
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-minilm")
-GENERATION_MODEL = os.getenv("GENERATION_MODEL", "qwen2.5-coder:7b")
-
-# Directory paths
-BASE_DATA_DIR = "./processed_data"
-CLAUDE_DATA_DIR = os.path.join(BASE_DATA_DIR, "claude")
+# Base directory for data storage
+BASE_DATA_DIR = os.getenv("BASE_DATA_DIR", "/opt/render/project/data")
 CHATGPT_DATA_DIR = os.path.join(BASE_DATA_DIR, "chatgpt")
+CLAUDE_DATA_DIR = os.path.join(BASE_DATA_DIR, "claude")
 
-# Required files for processing
-REQUIRED_FILES = [
-    "analytics.json",
-    "embeddings_2d.json",
-    "clusters.json",
-    "topics.json",
-    "chat_titles.json",
-    "reflections.json",
+# In-memory message storage
+IN_MEMORY_MESSAGES = {"chatgpt": [], "claude": []}
+
+# Placeholder for models data (used in api.py)
+models_data = [
+    {"name": "chatgpt", "type": "generation"},
+    {"name": "claude", "type": "generation"}
 ]

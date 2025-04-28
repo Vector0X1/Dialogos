@@ -1,3 +1,4 @@
+# src/routes/api.py
 from datetime import datetime
 import json
 import os
@@ -16,8 +17,7 @@ from src.services.background_processor import BackgroundProcessor
 from src.services.data_processing import analyze_branches
 from src.services.topic_generation import generate_topic_for_cluster
 from src.utils import load_visualization_data
-from src.config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR, IN_MEMORY_MESSAGES
-from src.shared_data import models_data
+from src.config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR, IN_MEMORY_MESSAGES, models_data  # Updated import
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

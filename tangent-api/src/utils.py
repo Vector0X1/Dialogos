@@ -1,8 +1,8 @@
-# utils.py
+# src/utils.py
 import os
 import json
 import logging
-from config import BASE_DATA_DIR, CLAUDE_DATA_DIR, CHATGPT_DATA_DIR
+from src.config import BASE_DATA_DIR, CLAUDE_DATA_DIR, CHATGPT_DATA_DIR  # Updated import
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
