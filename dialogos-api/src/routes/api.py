@@ -33,7 +33,7 @@ IN_MEMORY_CHATS = {}
 @api_bp.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin", "*")
-    allowed_origins = ["https://open-l confounders-six.vercel.app", "http://localhost:3000", "http://localhost:3001"]
+    allowed_origins = ["https://open-lac-six.vercel.app", "http://localhost:3000", "http://localhost:3001"]
     if origin in allowed_origins:
         response.headers["Access-Control-Allow-Origin"] = origin
     else:
