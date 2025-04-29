@@ -22,7 +22,7 @@ const ModelsModal = ({ isOpen, onClose, onSelectModel }) => {
       setError('');
       setIsLoading(true);
       try {
-        const res = await fetch('/api/models/library');
+        const res = await fetch('https://open-i0or.onrender.com/api/models/library');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const payload = await res.json();
         if (!Array.isArray(payload.models)) throw new Error('Invalid response shape');

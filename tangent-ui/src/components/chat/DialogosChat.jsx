@@ -241,42 +241,42 @@ const DialogosChat = ({
     }
   }, [initialConversation, selectedNodePosition, setNodes]);
 
-  useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const res = await fetch('https://open-i0or.onrender.com/api/models/library');
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const payload = await res.json();
-        // our endpoint returns { models: [...] }
-        if (!Array.isArray(payload.models)) {
-          throw new Error('Invalid response');
-        }
-        setModels(payload.models);
-  
-        // restore or pick a default
-        const stored = localStorage.getItem('selectedModel');
-        if (stored && payload.models.find(m => m.name === stored)) {
-          setSelectedModel(stored);
-        } else if (payload.models.length) {
-          setSelectedModel(payload.models[0].name);
-          localStorage.setItem('selectedModel', payload.models[0].name);
-        }
-      } catch (err) {
-        console.error('Failed to fetch models:', err);
-        // fallback
-        setModels([
-          { name: 'gpt-4o-mini', provider: 'OpenAI', type: 'generation' },
-          { name: 'deepseek-chat', provider: 'DeepSeek', type: 'generation' },
-        ]);
-        setSelectedModel('gpt-4o-mini');
+useEffect(() => {
+  const fetchModels = async () => {
+    try {
+      const res = await fetch('https://open-i0or.onrender.com/api/models/library');
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
-    };
-  
-    fetchModels();
-  }, []);
-  
+      const payload = await res.json();
+      // our endpoint returns { models: [...] }
+      if (!Array.isArray(payload.models)) {
+        throw new Error('Invalid response');
+      }
+      setModels(payload.models);
+
+      // restore or pick a default
+      const stored = localStorage.getItem('selectedModel');
+      if (stored && payload.models.find(m => m.name === stored)) {
+        setSelectedModel(stored);
+      } else if (payload.models.length) {
+        setSelectedModel(payload.models[0].name);
+        localStorage.setItem('selectedModel', payload.models[0].name);
+      }
+    } catch (err) {
+      console.error('Failed to fetch models:', err);
+      // fallback
+      setModels([
+        { name: 'gpt-4o-mini', provider: 'OpenAI', type: 'generation' },
+        { name: 'deepseek-chat', provider: 'DeepSeek', type: 'generation' },
+      ]);
+      setSelectedModel('gpt-4o-mini');
+    }
+  };
+
+  fetchModels();
+}, []);
+
  
 
   const handleToggleMessageExpand = useCallback((messageIndex) => {
