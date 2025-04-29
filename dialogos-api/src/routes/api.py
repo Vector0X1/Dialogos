@@ -521,7 +521,7 @@ def get_available_states():
 @api_bp.route("/state/<month_year>", methods=["GET"])
 def get_state(month_year):
     """Return state data (placeholder)."""
-    logger.info(f"Received request to /api/state/{month_year}")a
+    logger.info(f"Received request to /api/state/{month_year}")
     try:
         logger.info("Returning placeholder state data")
         return jsonify({"error": "State not found"}), 404
