@@ -50,7 +50,7 @@ background_processor = BackgroundProcessor()
 
 def load_in_memory_messages():
     """Load persisted messages from disk into IN_MEMORY_MESSAGES."""
-    for chat_type in ["chatgpt", "claude"]:
+    for chat_type in ["chatgpt"]:
         file_path = os.path.join(BASE_DATA_DIR, f"{chat_type}_messages.json")
         try:
             if os.path.exists(file_path):
