@@ -249,6 +249,7 @@ const ChatInterface = ({
             className={cn(
               "flex-1 px-4 py-3 rounded-xl resize-none",
               "bg-muted/50 border border-border",
+              "text-white placeholder:text-gray-400",
               "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
               "placeholder:text-muted-foreground",
               "transition-all duration-300",

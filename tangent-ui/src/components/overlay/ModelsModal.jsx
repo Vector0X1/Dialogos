@@ -28,7 +28,7 @@ const ModelsModal = ({ isOpen, onClose, onSelectModel }) => {
         if (!Array.isArray(payload.models)) throw new Error('Invalid response shape');
         setModels(payload.models);
 
-        // restore previous selection or pick the first available
+        // default selection
         const stored = localStorage.getItem('selectedModel');
         if (stored && payload.models.some(m => m.name === stored)) {
           setSelectedModel(stored);
@@ -38,10 +38,9 @@ const ModelsModal = ({ isOpen, onClose, onSelectModel }) => {
       } catch (err) {
         console.error('Failed to fetch models:', err);
         setError('Could not load models.');
-        // fallback hard-coded list
         const fallback = [
-          { name: 'gpt-4o-mini',  provider: 'OpenAI',  type: 'generation' },
-          { name: 'deepseek-chat',provider: 'DeepSeek',type: 'generation' },
+          { name: 'gpt-4o-mini', provider: 'OpenAI',  type: 'generation' },
+          { name: 'deepseek-chat', provider: 'DeepSeek', type: 'generation' },
         ];
         setModels(fallback);
         setSelectedModel(fallback[0].name);
@@ -85,24 +84,26 @@ const ModelsModal = ({ isOpen, onClose, onSelectModel }) => {
             </div>
           ) : (
             <div className="grid gap-2">
-              <label htmlFor="model-select" className="text-sm font-medium">
-                Available Models
-              </label>
-              <select
-                id="model-select"
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className={cn(
-                  'appearance-none bg-background border border-border rounded px-2 py-1 text-sm',
-                  'focus:outline-none focus:ring-2 focus:ring-primary w-full'
-                )}
-              >
-                {models.map((m) => (
-                  <option key={m.name} value={m.name}>
-                    {m.provider}: {m.name}
-                  </option>
-                ))}
-              </select>
+              <span className="text-white text-sm font-medium">Available Models</span>
+              <div className="flex flex-col space-y-2">
+                {models.map((m) => {
+                  const isActive = m.name === selectedModel;
+                  return (
+                    <button
+                     key={m.name}
+                     className={cn(
+                       'w-full text-left px-3 py-2 border rounded-lg text-white',
+                       isActive
+                         ? 'bg-primary text-primary-foreground border-primary'
+                         : 'bg-background hover:border-border'
+                     )}
+                     onClick={() => setSelectedModel(m.name)}
+                   >
+                     <span className="font-medium">{m.provider}</span>: {m.name}
+                   </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 

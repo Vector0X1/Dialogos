@@ -1608,7 +1608,10 @@ useEffect(() => {
       </ChatContainer>
 
       <FloatingInput
-        show={showQuickInput}
+        
+        
+         show={true}
+
         onClose={() => setShowQuickInput(false)}
         onSend={handleFloatingInputSend}
         isLoading={activeResponses.has(selectedNode)}

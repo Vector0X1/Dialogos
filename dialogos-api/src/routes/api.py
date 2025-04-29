@@ -539,3 +539,6 @@ def health_check():
     except Exception as e:
         logger.error(f"Error in health check: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+        

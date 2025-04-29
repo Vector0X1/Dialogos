@@ -13,6 +13,10 @@ IN_MEMORY_MESSAGES = {
 
 # Models data for /models/library endpoint
 models_data = [
-    {"name": "gpt-4o-mini",   "provider": "OpenAI",   "type": "generation"},
-    {"name": "deepseek-chat", "provider": "DeepSeek", "type": "generation"},
+    # OpenAI
+    {"name": "gpt-4o-mini",    "provider": "OpenAI", "type": "generation"},
+    {"name": "gpt-4",          "provider": "OpenAI", "type": "generation"},
+    {"name": "gpt-3.5-turbo",  "provider": "OpenAI", "type": "generation"},
+    # DeepSeek
+    {"name": "deepseek-chat",  "provider": "DeepSeek", "type": "generation"},
 ]
