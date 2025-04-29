@@ -1,8 +1,7 @@
-# src/utils.py
 import os
 import json
 import logging
-from src.config import BASE_DATA_DIR, CLAUDE_DATA_DIR, CHATGPT_DATA_DIR
+from src.config import BASE_DATA_DIR, CHATGPT_DATA_DIR, DEEPSEEK_DATA_DIR
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -68,15 +67,15 @@ def ensure_directories():
         os.makedirs(BASE_DATA_DIR, exist_ok=True)
         logger.info(f"Ensured directory: {BASE_DATA_DIR}")
 
-        os.makedirs(CLAUDE_DATA_DIR, exist_ok=True)
         os.makedirs(CHATGPT_DATA_DIR, exist_ok=True)
-        logger.info(f"Ensured directory: {CLAUDE_DATA_DIR}")
+        os.makedirs(DEEPSEEK_DATA_DIR, exist_ok=True)
         logger.info(f"Ensured directory: {CHATGPT_DATA_DIR}")
+        logger.info(f"Ensured directory: {DEEPSEEK_DATA_DIR}")
 
-        os.makedirs(os.path.join(CLAUDE_DATA_DIR, "states"), exist_ok=True)
         os.makedirs(os.path.join(CHATGPT_DATA_DIR, "states"), exist_ok=True)
-        logger.info(f"Ensured directory: {os.path.join(CLAUDE_DATA_DIR, 'states')}")
+        os.makedirs(os.path.join(DEEPSEEK_DATA_DIR, "states"), exist_ok=True)
         logger.info(f"Ensured directory: {os.path.join(CHATGPT_DATA_DIR, 'states')}")
+        logger.info(f"Ensured directory: {os.path.join(DEEPSEEK_DATA_DIR, 'states')}")
     except Exception as e:
         logger.error(f"Error ensuring directories: {str(e)}", exc_info=True)
         logger.warning("Proceeding without ensuring directories; file operations may fail later")

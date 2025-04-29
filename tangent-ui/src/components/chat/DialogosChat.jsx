@@ -6,6 +6,8 @@ import ChatContainer from './ChatContainer';
 import FloatingInput from '../shared/FloatingInput';
 import { MessageNavigator } from '../navigation/MessageNavigator';
 import { ModelStatus } from '../shared/ModelStatus';
+import ModelsModal from '../overlay/ModelsModal';
+import { Button } from '../core/button';
 import { cn } from '../../utils/utils';
 import { useVisualization } from '../providers/VisualizationProvider';
 
@@ -62,7 +64,6 @@ const systemPrompt = `You are a helpful AI assistant. When responding:
 1. For brief responses ("briefly", "quick", "short"):
    - Use maximum 3 sentences
    - Focus on core concepts only
-
 2. For comprehensive responses ("tell me everything", "explain in detail"):
    - Write at least 6-8 paragraphs
    - Cover fundamentals, history, types, applications
@@ -70,17 +71,14 @@ const systemPrompt = `You are a helpful AI assistant. When responding:
    - Explain technical concepts in depth
    - Break down complex topics into subtopics
    - Discuss current trends and future implications
-
 3. For unspecified length:
    - Provide 4-5 sentences
    - Balance detail and brevity
-
 4. For React-related tasks:
-   - Focus on functional components and hooks (e.g., \`useState\`, \`useEffect\`).
+   - Focus on functional components and hooks (e.g., useState, useEffect).
    - Assume the user works with an environment that supports modern React (version 18 or higher) and includes support for live previews and error handling.
    - Components should be styled using a lightweight, utility-first CSS framework (such as Tailwind CSS) unless otherwise specified.
    - Responses should account for ease of testing and previewing components, ensuring a smooth developer experience.
-
 5. Always adapt your response length and content style based on explicit or implicit length cues in the user's question.`;
 
 const DialogosChat = ({
@@ -88,9 +86,7 @@ const DialogosChat = ({
   isPanelCollapsed = false,
   nodes,
   setNodes,
-  activeChat,
-  setActiveChat,
-  onCenterNode, // Added prop to expose centering functionality
+  onCenterNode,
 }) => {
   const [selectedNodePosition, setSelectedNodePosition] = useState(null);
   const [temperature, setTemperature] = useState(0.7);
@@ -110,8 +106,9 @@ const DialogosChat = ({
   const [isLoading, setIsLoading] = useState(false);
   const [models, setModels] = useState([]);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isModelsModalOpen, setIsModelsModalOpen] = useState(false);
   const modelDropdownRef = useRef(null);
-  const [selectedModel, setSelectedModel] = useState('');
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
   const [chatContainerSize, setChatContainerSize] = useState('normal');
   const [activeContext, setActiveContext] = useState({
     messages: [],
@@ -145,20 +142,19 @@ const DialogosChat = ({
   const PANNING_SENSITIVITY = 0.42;
   const ZOOM_SENSITIVITY = 0.0012;
 
-  // Function to center a specific node
+  // Center a specific node
   const centerNode = useCallback(
     (nodeId) => {
       const node = nodes.find((n) => n.id === nodeId);
       if (!node || !canvasRef.current) return;
 
-      setSelectedNode(nodeId); // Update the selected node
-      setActiveThreadId(nodeId); // Update the active thread
+      setSelectedNode(nodeId);
+      setActiveThreadId(nodeId);
 
       const canvasRect = canvasRef.current.getBoundingClientRect();
       const centerX = canvasRect.width / 2;
       const centerY = canvasRect.height / 2;
 
-      // Center the node by adjusting the translate values
       const newTranslateX = centerX - node.x * scale;
       const newTranslateY = centerY - node.y * scale;
 
@@ -167,16 +163,14 @@ const DialogosChat = ({
         y: newTranslateY,
       });
 
-      // Adjust the scale to ensure the node is visible
-      setScale(1); // Reset scale to 1 for consistency
+      setScale(1);
     },
     [nodes, scale]
   );
 
-  // Expose the centerNode function via the onCenterNode prop
   useEffect(() => {
     if (onCenterNode) {
-      onCenterNode.current = centerNode; // Pass the function as a ref
+      onCenterNode.current = centerNode;
     }
   }, [centerNode, onCenterNode]);
 
@@ -245,7 +239,7 @@ const DialogosChat = ({
       setExpandedNodes(new Set(updatedNodes.map((node) => node.id)));
       setSelectedNode(updatedNodes[0]?.id || 1);
     }
-  }, [initialConversation, selectedNodePosition]);
+  }, [initialConversation, selectedNodePosition, setNodes]);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -258,24 +252,28 @@ const DialogosChat = ({
 
         console.log('API Response from /api/tags:', data);
 
-        if (!data || !Array.isArray(data.models)) {
-          throw new Error('Invalid response: Expected data.models to be an array');
+        if (!Array.isArray(data)) {
+          throw new Error('Invalid response: Expected an array');
         }
 
-        setModels(data.models);
+        setModels(data);
 
         const savedModel = localStorage.getItem('selectedModel');
-        if (savedModel && data.models.some((model) => model.name === savedModel)) {
+        if (savedModel && data.some((model) => model.name === savedModel)) {
           setSelectedModel(savedModel);
-        } else if (data.models.length > 0) {
-          const lastModel = data.models[data.models.length - 1].name;
-          setSelectedModel(lastModel);
-          localStorage.setItem('selectedModel', lastModel);
+        } else if (data.length > 0) {
+          const defaultModel = data[0].name; // Default to first model (gpt-4o-mini)
+          setSelectedModel(defaultModel);
+          localStorage.setItem('selectedModel', defaultModel);
         }
       } catch (error) {
         console.error('Error fetching models:', error);
-        setModels([]);
-        setSelectedModel('');
+        setModels([
+          { name: 'gpt-4o-mini', provider: 'OpenAI', type: 'generation' },
+          { name: 'deepseek-chat', provider: 'DeepSeek', type: 'generation' },
+        ]);
+        setSelectedModel('gpt-4o-mini');
+        localStorage.setItem('selectedModel', 'gpt-4o-mini');
       }
     };
     fetchModels();
@@ -299,7 +297,7 @@ const DialogosChat = ({
 
   const handleThemeChange = useCallback((newTheme) => {
     setTheme(newTheme);
-  }, []);
+  }, [setTheme]);
 
   const focusOnMessage = useCallback(
     (nodeId, messageIndex, zoomInClose = false) => {
@@ -373,8 +371,9 @@ const DialogosChat = ({
       return;
     }
 
-    // Set the node title based on the prefix of the message (user or AI)
-    const messagePrefix = message.slice(0, 20); // Take first 20 characters as prefix
+    const chatType = selectedModel.startsWith('deepseek') ? 'deepseek' : 'chatgpt';
+
+    const messagePrefix = message.slice(0, 20);
     const updatedNodes = nodes.map((node) =>
       node.id === nodeId ? { ...node, title: messagePrefix } : node
     );
@@ -405,6 +404,7 @@ const DialogosChat = ({
     );
 
     setActiveResponses((prev) => new Map(prev).set(nodeId, true));
+    setIsLoading(true);
 
     try {
       const conversationContext =
@@ -422,7 +422,9 @@ const DialogosChat = ({
         body: JSON.stringify({
           model: selectedModel,
           prompt: formattedConversation + '\n\nHuman: ' + message + '\n\nAssistant:',
-          stream: true,
+          chat_type: chatType,
+          chat_name: currentNode.title || 'Default Chat',
+          branch_id: currentNode.branchId || '0',
           system: currentNode.systemPrompt || systemPrompt,
           options: {
             temperature: temperature || 0.7,
@@ -433,6 +435,10 @@ const DialogosChat = ({
           },
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       let accumulatedResponse = '';
       const reader = response.body.getReader();
@@ -458,6 +464,7 @@ const DialogosChat = ({
                   node.id === nodeId ? { ...node, streamingContent: accumulatedResponse } : node
                 )
               );
+              setStreamingMessage(accumulatedResponse);
             }
           } catch (err) {
             console.error('Error parsing JSON line:', err);
@@ -471,7 +478,6 @@ const DialogosChat = ({
         timestamp: new Date().toISOString(),
       };
 
-      // Update the node title based on the AI response prefix
       const aiMessagePrefix = accumulatedResponse.slice(0, 20);
       setNodes((prevNodes) =>
         prevNodes.map((node) =>
@@ -536,6 +542,8 @@ const DialogosChat = ({
         next.delete(nodeId);
         return next;
       });
+      setIsLoading(false);
+      setStreamingMessage('');
     }
   };
 
@@ -546,26 +554,6 @@ const DialogosChat = ({
     if (pythonIndicators.some((i) => content.toLowerCase().includes(i))) return 'python';
     if (reactIndicators.some((i) => content.toLowerCase().includes(i))) return 'react';
     return 'text';
-  };
-
-  const wrapCodeInComponent = (code) => {
-    if (!code.includes('export default') && !code.includes('function')) {
-      return `
-import React, { useState } from 'react';
-
-export default function PreviewComponent() {
-  ${code}
-  return (
-    <div className="p-4">
-      <button onClick={handleClick} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-        Click me!
-      </button>
-      <p className="mt-2">Count: {count}</p>
-    </div>
-  );
-}`;
-    }
-    return code;
   };
 
   const handleFloatingInputSend = (message) => {
@@ -774,8 +762,8 @@ export default function PreviewComponent() {
         setScale(newScale);
         setTranslate(newTranslate);
       } else {
-        const dx = e.deltaX * PANNING_SENSITIVITY;
-        const dy = e.deltaY * PANNING_SENSITIVITY;
+        const dx = e.deltaX * Number(PANNING_SENSITIVITY);
+        const dy = e.deltaY * Number(PANNING_SENSITIVITY);
 
         setTranslate((prev) => ({
           x: prev.x - dx,
@@ -966,7 +954,7 @@ export default function PreviewComponent() {
         y: canvasRect.height / 2 - structureCenterY * newScale,
       });
     }
-  }, [nodes]);
+  }, [nodes, setNodes]);
 
   const NODE_WIDTH = 400;
   const NODE_HEADER_HEIGHT = 80;
@@ -1105,7 +1093,6 @@ export default function PreviewComponent() {
 
     const adjustedPosition = adjustNodePosition(defaultPosition, nodes, NODE_SPACING);
 
-    // Set the branch title based on the message prefix
     const messageContent = parentNode.messages[messageIndex]?.content || '';
     const messagePrefix = messageContent.slice(0, 20);
 
@@ -1134,7 +1121,7 @@ export default function PreviewComponent() {
       for (const node of nodes) {
         const distance = Math.sqrt(
           Math.pow(node.x - adjustedPosition.x, 2) +
-          Math.pow(node.y - adjustedPosition.y, 2)
+            Math.pow(node.y - adjustedPosition.y, 2)
         );
 
         if (distance < OVERLAP_THRESHOLD) {
@@ -1204,7 +1191,6 @@ export default function PreviewComponent() {
           }
           break;
         }
-
         case 'down': {
           if (focusedMessageIndex < currentNode.messages.length - 1) {
             focusOnMessage(selectedNode, focusedMessageIndex + 1);
@@ -1216,7 +1202,6 @@ export default function PreviewComponent() {
           }
           break;
         }
-
         case 'left': {
           if (branches.parent?.position === 'left') {
             focusOnMessage(branches.parent.node.id, currentNode.parentMessageIndex);
@@ -1228,7 +1213,6 @@ export default function PreviewComponent() {
           }
           break;
         }
-
         case 'right': {
           if (branches.parent?.position === 'right') {
             focusOnMessage(branches.parent.node.id, currentNode.parentMessageIndex);
@@ -1297,7 +1281,6 @@ export default function PreviewComponent() {
           }
           break;
         }
-
         case 's': {
           if (focusedMessageIndex < currentNode.messages.length - 1) {
             focusOnMessage(selectedNode, focusedMessageIndex + 1, isShiftPressed);
@@ -1309,7 +1292,6 @@ export default function PreviewComponent() {
           }
           break;
         }
-
         case 'a': {
           if (branches.parent?.position === 'left') {
             focusOnMessage(
@@ -1325,7 +1307,6 @@ export default function PreviewComponent() {
           }
           break;
         }
-
         case 'd': {
           if (branches.parent?.position === 'right') {
             focusOnMessage(
@@ -1422,7 +1403,7 @@ export default function PreviewComponent() {
     canvas.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
-      canvas.removeEventListener('wheel', handleWheel, { passive: false });
+      canvas.removeEventListener('wheel', handleWheel);
     };
   }, [handleWheel]);
 
@@ -1443,8 +1424,8 @@ export default function PreviewComponent() {
       if (dragState.isDragging) {
         handleDrag(e);
       } else if (isPanning) {
-        const dx = (e.clientX - lastMousePos.x) * PANNING_SENSITIVITY;
-        const dy = (e.clientY - lastMousePos.y) * PANNING_SENSITIVITY;
+        const dx = (e.clientX - lastMousePos.x) * Number(PANNING_SENSITIVITY);
+        const dy = (e.clientY - lastMousePos.y) * Number(PANNING_SENSITIVITY);
 
         setTranslate((prev) => ({
           x: prev.x + dx,
@@ -1498,22 +1479,30 @@ export default function PreviewComponent() {
             left: isPanelCollapsed ? '1rem' : 'calc(20vw + 1rem)',
           }}
         >
-          <CanvasToolbar
-            activeTool={activeTool}
-            onToolSelect={handleToolSelect}
-            theme={theme}
-            onThemeChange={handleThemeChange}
-            selectedModel={selectedModel}
-            models={models}
-            onModelSelect={setSelectedModel}
-            isModelDropdownOpen={isModelDropdownOpen}
-            setIsModelDropdownOpen={setIsModelDropdownOpen}
-            modelDropdownRef={modelDropdownRef}
-          />
+          <div className="flex flex-col gap-2">
+            <CanvasToolbar
+              activeTool={activeTool}
+              onToolSelect={handleToolSelect}
+              theme={theme}
+              onThemeChange={handleThemeChange}
+              selectedModel={selectedModel}
+              models={models}
+              onModelSelect={setSelectedModel}
+              isModelDropdownOpen={isModelDropdownOpen}
+              setIsModelDropdownOpen={setIsModelDropdownOpen}
+              modelDropdownRef={modelDropdownRef}
+            />
+            <Button
+              onClick={() => setIsModelsModalOpen(true)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg p-2 text-sm"
+            >
+              Select Model
+            </Button>
+          </div>
         </div>
 
         <div
-          className="fixed bottom-1 mx-2 z-10 flex gap-2 right: 10px width: -webkit-fill-available justify-content: space-around"
+          className="fixed bottom-1 mx-2 z-10 flex gap-2 right-10 w-[calc(100%-20px)] justify-center"
           style={{
             left: isPanelCollapsed ? '1rem' : 'calc(20vw + 1rem)',
           }}
@@ -1632,6 +1621,16 @@ export default function PreviewComponent() {
           bottom: 20,
           left: '50%',
           transform: 'translateX(-50%)',
+        }}
+      />
+
+      <ModelsModal
+        isOpen={isModelsModalOpen}
+        onClose={() => setIsModelsModalOpen(false)}
+        onSelectModel={(modelName) => {
+          setSelectedModel(modelName);
+          localStorage.setItem('selectedModel', modelName);
+          setIsModelsModalOpen(false);
         }}
       />
     </div>

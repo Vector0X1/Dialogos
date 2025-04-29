@@ -1,4 +1,3 @@
-# src/app.py
 import os
 import sys
 import logging
@@ -15,7 +14,7 @@ if project_root not in sys.path:
 from src.routes.api import api_bp
 from src.utils import ensure_directories
 from src.services.background_processor import BackgroundProcessor
-from src.config import BASE_DATA_DIR, IN_MEMORY_MESSAGES
+from src.config import BASE_DATA_DIR, CHATGPT_DATA_DIR, DEEPSEEK_DATA_DIR, IN_MEMORY_MESSAGES
 
 # Set up logging for Render debugging
 logging.basicConfig(level=logging.INFO)
@@ -24,13 +23,12 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Configure CORS globally for all routes
-CORS(app, resources={ r"/api/*": {
-        "origins": ["https://open-lac-six.vercel.app", "http://localhost:3000", "http://localhost:3001"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
-    }
-})
+CORS(app, resources={r"/api/*": {
+    "origins": ["https://open-lac-six.vercel.app", "http://localhost:3000", "http://localhost:3001"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"],
+    "supports_credentials": True
+}})
 
 app.register_blueprint(api_bp, url_prefix="/api")
 
@@ -50,7 +48,7 @@ background_processor = BackgroundProcessor()
 
 def load_in_memory_messages():
     """Load persisted messages from disk into IN_MEMORY_MESSAGES."""
-    for chat_type in ["chatgpt", "claude"]:
+    for chat_type in ["chatgpt", "deepseek"]:
         file_path = os.path.join(BASE_DATA_DIR, f"{chat_type}_messages.json")
         try:
             if os.path.exists(file_path):

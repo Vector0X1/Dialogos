@@ -10,7 +10,7 @@ export const ModelStatus = ({
   models = [],
   onModelSelect,
   className,
-  containerWidth
+  containerWidth,
 }) => {
   const [isSelecting, setIsSelecting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -21,7 +21,6 @@ export const ModelStatus = ({
   const [canScrollRight, setCanScrollRight] = useState(false);
   const scrollContainerRef = useRef(null);
   const tempInputRef = useRef(null);
-  const [modelName, modelSize] = (selectedModel || '').split(':');
 
   // Calculate max width based on container width
   const getMaxWidth = () => {
@@ -80,7 +79,7 @@ export const ModelStatus = ({
       const scrollAmount = direction === 'left' ? -200 : 200;
       scrollContainerRef.current.scrollBy({
         left: scrollAmount,
-        behavior: 'smooth'
+        behavior: 'smooth',
       });
     }
   };
@@ -101,6 +100,7 @@ export const ModelStatus = ({
   const handleConfirm = () => {
     if (tempSelection) {
       onModelSelect(tempSelection);
+      localStorage.setItem('selectedModel', tempSelection);
     }
     handleCancel();
   };
@@ -115,16 +115,18 @@ export const ModelStatus = ({
 
   if (isSelecting) {
     return (
-      <div className={cn(
-        "p-2 rounded-md text-sm",
-        "bg-background/80 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60",
-        "shadow-sm border border-border",
-        "transition-all duration-200",
-        getModalWidth(),
-        isClosing ? "opacity-0 scale-95" : "opacity-100 scale-100",
-        "w-full",
-        className
-      )}>
+      <div
+        className={cn(
+          'p-2 rounded-md text-sm',
+          'bg-background/80 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60',
+          'shadow-sm border border-border',
+          'transition-all duration-200',
+          getModalWidth(),
+          isClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100',
+          'w-full',
+          className
+        )}
+      >
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Select Model</span>
@@ -156,12 +158,14 @@ export const ModelStatus = ({
                   key={model.name}
                   onClick={() => handleSelect(model.name)}
                   className={cn(
-                    "px-3 py-1.5 rounded-md whitespace-nowrap",
-                    "transition-colors duration-200",
-                    tempSelection === model.name ? "bg-primary text-primary-foreground" : "hover:bg-secondary/50"
+                    'px-3 py-1.5 rounded-md whitespace-nowrap',
+                    'transition-colors duration-200',
+                    tempSelection === model.name
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-secondary/50'
                   )}
                 >
-                  {model.name}
+                  {model.provider}: {model.name}
                 </button>
               ))}
             </div>
@@ -186,10 +190,10 @@ export const ModelStatus = ({
             <button
               onClick={handleConfirm}
               className={cn(
-                "px-3 py-1 text-sm rounded-md",
+                'px-3 py-1 text-sm rounded-md',
                 tempSelection
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "opacity-50 cursor-not-allowed bg-secondary"
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'opacity-50 cursor-not-allowed bg-secondary'
               )}
               disabled={!tempSelection}
             >
@@ -205,31 +209,27 @@ export const ModelStatus = ({
     <div
       onClick={() => setIsSelecting(true)}
       className={cn(
-        "p-1.5 rounded-md text-[10px] cursor-pointer",
-        "bg-background/80 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60",
-        "shadow-sm border border-border",
-        "hover:bg-secondary/50 transition-colors duration-200",
+        'p-1.5 rounded-md text-[10px] cursor-pointer',
+        'bg-background/80 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60',
+        'shadow-sm border border-border',
+        'hover:bg-secondary/50 transition-colors duration-200',
         getMaxWidth(),
-        "w-full",
+        'w-full',
         className
       )}
     >
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1 min-w-0">
           <Bot className="h-3 w-3 text-primary flex-shrink-0" />
-          <span className={cn(
-            "rounded truncate",
-            "bg-primary/20 text-primary"
-          )}>
-            {modelName || 'No model selected'}
+          <span
+            className={cn(
+              'rounded truncate',
+              'bg-primary/20 text-primary'
+            )}
+          >
+            {selectedModel || 'No model selected'}
           </span>
         </div>
-
-        {modelSize && (
-          <span className="text-muted-foreground border-l border-border pl-2 flex-shrink-0">
-            {modelSize}
-          </span>
-        )}
 
         <div
           className="text-muted-foreground border-l border-border pl-2 flex-shrink-0"
@@ -247,9 +247,7 @@ export const ModelStatus = ({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <span onClick={handleTempClick}>
-              T={temperature}
-            </span>
+            <span onClick={handleTempClick}>T={temperature}</span>
           )}
         </div>
 

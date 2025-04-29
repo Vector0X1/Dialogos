@@ -1,8 +1,8 @@
-# src/routes/api.py
 from datetime import datetime
 import json
 import os
 import re
+import time
 import traceback
 from collections import defaultdict
 
@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, request, jsonify, make_response
 from openai import OpenAI
+import requests
 import logging
 
 from src.services.embedding import get_embeddings
@@ -17,7 +18,7 @@ from src.services.background_processor import BackgroundProcessor
 from src.services.data_processing import analyze_branches
 from src.services.topic_generation import generate_topic_for_cluster
 from src.utils import load_visualization_data
-from src.config import CLAUDE_DATA_DIR, CHATGPT_DATA_DIR, BASE_DATA_DIR, IN_MEMORY_MESSAGES, models_data
+from src.config import CHATGPT_DATA_DIR, DEEPSEEK_DATA_DIR, BASE_DATA_DIR, IN_MEMORY_MESSAGES, models_data
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -46,48 +47,81 @@ def add_cors_headers(response):
 
 @api_bp.route("/generate", methods=["POST"])
 def generate_text():
-    """Generate a response using OpenAI's ChatGPT API and store in IN_MEMORY_MESSAGES."""
+    """Generate a response using OpenAI or DeepSeek API and store in IN_MEMORY_MESSAGES."""
     logger.info("Received request to /api/generate")
     data = request.json
     logger.debug(f"Request data: {data}")
     prompt = data.get("prompt", "")
-    logger.info(f"Prompt received: {prompt}")
+    model = data.get("model", "gpt-4o-mini")
+    chat_type = data.get("chat_type", "chatgpt")
+    logger.info(f"Prompt received: {prompt}, Model: {model}, Chat Type: {chat_type}")
     if not prompt:
         logger.warning("Empty prompt received")
         return jsonify({"error": "Empty prompt"}), 400
-    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    api_key = os.getenv("OPENAI_API_KEY")
-    logger.info(f"Using model: {model}")
-    if not api_key:
-        logger.error("Missing OPENAI_API_KEY")
-        return jsonify({"error": "Missing OPENAI_API_KEY"}), 500
-    try:
-        logger.info("Initializing OpenAI client")
-        client = OpenAI(api_key=api_key)
-        logger.info("Sending request to OpenAI API")
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You are Dialogos's helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.8,
-        )
-        response_text = response.choices[0].message.content
-        logger.info("Received response from OpenAI API")
+    if chat_type not in IN_MEMORY_MESSAGES:
+        logger.warning(f"Invalid chat type: {chat_type}")
+        return jsonify({"error": "Invalid chat type"}), 400
 
-        # Store in IN_MEMORY_MESSAGES
-        chat_name = data.get("chat_name", "Default Chat")
-        branch_id = data.get("branch_id", "0")
-        timestamp = datetime.now().isoformat()
-        IN_MEMORY_MESSAGES.setdefault("chatgpt", []).extend([
+    chat_name = data.get("chat_name", "Default Chat")
+    branch_id = data.get("branch_id", "0")
+    timestamp = datetime.now().isoformat()
+
+    try:
+        if model.startswith("deepseek"):
+            api_key = os.getenv("DEEPSEEK_API_KEY")
+            if not api_key:
+                logger.error("Missing DEEPSEEK_API_KEY")
+                return jsonify({"error": "Missing DEEPSEEK_API_KEY"}), 500
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": data.get("system", "You are Dialogos's helpful assistant.")},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": data.get("options", {}).get("temperature", 0.8)
+            }
+            logger.info("Sending request to DeepSeek API")
+            response = requests.post("https://api.deepseek.com/v1/chat/completions", headers=headers, json=payload)
+            response.raise_for_status()
+            response_data = response.json()
+            if not response_data.get("choices") or not response_data["choices"][0].get("message"):
+                logger.error("Invalid DeepSeek API response")
+                return jsonify({"error": "Invalid response from DeepSeek API"}), 500
+            response_text = response_data["choices"][0]["message"]["content"]
+            logger.info("Received response from DeepSeek API")
+
+        else:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                logger.error("Missing OPENAI_API_KEY")
+                return jsonify({"error": "Missing OPENAI_API_KEY"}), 500
+            logger.info("Initializing OpenAI client")
+            client = OpenAI(api_key=api_key)
+            logger.info("Sending request to OpenAI API")
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": data.get("system", "You are Dialogos's helpful assistant.")},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=data.get("options", {}).get("temperature", 0.8)
+            )
+            response_text = response.choices[0].message.content
+            logger.info("Received response from OpenAI API")
+
+        IN_MEMORY_MESSAGES.setdefault(chat_type, []).extend([
             {
                 "chat_name": chat_name,
                 "branch_id": branch_id,
                 "message_id": f"msg_{timestamp}_human",
                 "text": prompt,
                 "timestamp": timestamp,
-                "sender": "human"
+                "sender": "human",
+                "model": model
             },
             {
                 "chat_name": chat_name,
@@ -95,20 +129,23 @@ def generate_text():
                 "message_id": f"msg_{timestamp}_assistant",
                 "text": response_text,
                 "timestamp": timestamp,
-                "sender": "assistant"
+                "sender": "assistant",
+                "model": model
             }
         ])
-        logger.debug(f"Updated IN_MEMORY_MESSAGES: {len(IN_MEMORY_MESSAGES['chatgpt'])} messages")
+        logger.debug(f"Updated IN_MEMORY_MESSAGES for {chat_type}: {len(IN_MEMORY_MESSAGES[chat_type])} messages")
 
-        # Trigger background processing
         logger.info("Triggering background processing")
         background_processor.start_task()
 
         logger.info("Returning response to client")
         return jsonify({"response": response_text})
 
+    except requests.RequestException as e:
+        logger.error(f"DeepSeek API request failed: {str(e)}", exc_info=True)
+        return jsonify({"error": f"DeepSeek API error: {str(e)}"}), 500
     except Exception as e:
-        logger.error(f"Error in OpenAI API call: {str(e)}", exc_info=True)
+        logger.error(f"Error in API call: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.route("/process", methods=["POST"])
@@ -129,7 +166,6 @@ def process_data():
             logger.warning(f"Invalid chat type: {chat_type}")
             return jsonify({"error": "Invalid chat type"}), 400
         
-        # Save file temporarily
         temp_dir = os.path.join(BASE_DATA_DIR, "temp")
         logger.info(f"Creating temp directory: {temp_dir}")
         os.makedirs(temp_dir, exist_ok=True)
@@ -137,7 +173,6 @@ def process_data():
         logger.info(f"Saving file to: {file_path}")
         file.save(file_path)
         
-        # Start background task
         logger.info("Starting background task")
         task_id = background_processor.start_task(file_path)
         logger.info(f"Background task started with ID: {task_id}")
@@ -227,7 +262,7 @@ def get_models():
     try:
         models_config = {
             "generation_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-            "embedding_model": os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002"),
+            "deepseek_model": os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
         }
         logger.info(f"Returning models config: {models_config}")
         return jsonify(models_config)
@@ -237,11 +272,11 @@ def get_models():
 
 @api_bp.route("/tags", methods=["GET"])
 def get_tags():
-    """Return available tags (placeholder)."""
+    """Return available models (for DialogosChat compatibility)."""
     logger.info("Received request to /api/tags")
     try:
-        logger.info("Returning placeholder tags")
-        return jsonify([])
+        logger.info(f"Returning {len(models_data)} models")
+        return jsonify(models_data)  # Return array directly
     except Exception as e:
         logger.error(f"Error fetching tags: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -266,11 +301,14 @@ def get_visualization_data():
     logger.info("Received request to /api/visualization")
     try:
         chat_type = request.args.get("type", "chatgpt")
-        if chat_type not in ["chatgpt", "claude"]:
+        if chat_type not in ["chatgpt", "deepseek"]:
             logger.warning(f"Invalid chat type: {chat_type}")
             return jsonify({"error": "Invalid chat type"}), 400
 
-        data_dir = CHATGPT_DATA_DIR if chat_type == "chatgpt" else CLAUDE_DATA_DIR
+        data_dir = {
+            "chatgpt": CHATGPT_DATA_DIR,
+            "deepseek": DEEPSEEK_DATA_DIR
+        }[chat_type]
         logger.info(f"Fetching visualization data for chat_type={chat_type} from {data_dir}")
 
         visualization_data = load_visualization_data(data_dir)
@@ -565,6 +603,7 @@ def add_message():
         text = data.get("text")
         timestamp = data.get("timestamp", datetime.now().isoformat())
         parent_message = data.get("parent_message", None)
+        model = data.get("model", "gpt-4o-mini")
 
         if not all([chat_name, message_id, text]):
             logger.warning("Missing required fields (chat_name, message_id, text)")
@@ -584,7 +623,8 @@ def add_message():
             "message_id": message_id,
             "text": text,
             "timestamp": timestamp,
-            "sender": data.get("sender", "human")
+            "sender": data.get("sender", "human"),
+            "model": model
         }
         if parent_message:
             new_message["parent_message"] = parent_message
@@ -592,7 +632,6 @@ def add_message():
         IN_MEMORY_MESSAGES[chat_type].append(new_message)
         logger.info(f"Message added: {new_message}")
 
-        # Trigger background processing
         logger.info("Triggering background processing")
         background_processor.start_task()
 
