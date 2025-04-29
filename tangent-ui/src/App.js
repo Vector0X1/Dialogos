@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { IntegratedDashboard } from './components//layout/IntegratedDashboard';
+import { IntegratedDashboard } from './components/layout/IntegratedDashboard';
 import VisualizationProvider from './components/providers/VisualizationProvider';
 import OnboardingTour from './components/overlay/OnboardingTour';
-
+import MobileBlocker from './components/MobileBlocker';
 import './styles/Global.css';
 
 function App() {
@@ -20,7 +20,11 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* Block mobile users */}
+      <MobileBlocker />
+
+      {/* Main application */}
       <VisualizationProvider>
         <OnboardingTour />
         <IntegratedDashboard />
