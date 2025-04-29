@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from src.config import BASE_DATA_DIR, CHATGPT_DATA_DIR, DEEPSEEK_DATA_DIR
+from src.config import BASE_DATA_DIR, CHATGPT_DATA_DIR
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
