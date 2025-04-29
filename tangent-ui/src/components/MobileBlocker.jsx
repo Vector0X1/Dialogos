@@ -20,16 +20,18 @@ export default function MobileBlocker() {
     <div
       className="
         fixed inset-0 z-[9999] flex items-center justify-center
-        bg-black/47 dark:bg-black/50
+        bg-black/37 dark:bg-black/50
         backdrop-blur-md
         p-6 text-center
       "
     >
       <div className=" ">
         <h1 className="text-2xl font-bold mb-2 text-white-900 dark:text-gray-100">
-          Please run app on desktop
+          Dialogos
         </h1>
-       
+        <p className="text-lg text-gray-700 dark:text-gray-200">
+        Please run app on desktop
+        </p>
       </div>
     </div>
   );
