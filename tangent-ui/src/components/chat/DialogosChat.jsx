@@ -244,40 +244,40 @@ const DialogosChat = ({
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const response = await fetch('https://open-i0or.onrender.com/api/tags');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        const res = await fetch('https://open-i0or.onrender.com/api/models/library');
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
         }
-        const data = await response.json();
-
-        console.log('API Response from /api/tags:', data);
-
-        if (!Array.isArray(data)) {
-          throw new Error('Invalid response: Expected an array');
+        const payload = await res.json();
+        // our endpoint returns { models: [...] }
+        if (!Array.isArray(payload.models)) {
+          throw new Error('Invalid response');
         }
-
-        setModels(data);
-
-        const savedModel = localStorage.getItem('selectedModel');
-        if (savedModel && data.some((model) => model.name === savedModel)) {
-          setSelectedModel(savedModel);
-        } else if (data.length > 0) {
-          const defaultModel = data[0].name; // Default to first model (gpt-4o-mini)
-          setSelectedModel(defaultModel);
-          localStorage.setItem('selectedModel', defaultModel);
+        setModels(payload.models);
+  
+        // restore or pick a default
+        const stored = localStorage.getItem('selectedModel');
+        if (stored && payload.models.find(m => m.name === stored)) {
+          setSelectedModel(stored);
+        } else if (payload.models.length) {
+          setSelectedModel(payload.models[0].name);
+          localStorage.setItem('selectedModel', payload.models[0].name);
         }
-      } catch (error) {
-        console.error('Error fetching models:', error);
+      } catch (err) {
+        console.error('Failed to fetch models:', err);
+        // fallback
         setModels([
           { name: 'gpt-4o-mini', provider: 'OpenAI', type: 'generation' },
           { name: 'deepseek-chat', provider: 'DeepSeek', type: 'generation' },
         ]);
         setSelectedModel('gpt-4o-mini');
-        localStorage.setItem('selectedModel', 'gpt-4o-mini');
       }
     };
+  
     fetchModels();
   }, []);
+  
+ 
 
   const handleToggleMessageExpand = useCallback((messageIndex) => {
     setExpandedMessages((prev) => {
@@ -423,7 +423,7 @@ const DialogosChat = ({
           model: selectedModel,
           prompt: formattedConversation + '\n\nHuman: ' + message + '\n\nAssistant:',
           chat_type: chatType,
-          chat_name: currentNode.title || 'Default Chat',
+          chat_name: currentNode.title || 'Default Chata',
           branch_id: currentNode.branchId || '0',
           system: currentNode.systemPrompt || systemPrompt,
           options: {

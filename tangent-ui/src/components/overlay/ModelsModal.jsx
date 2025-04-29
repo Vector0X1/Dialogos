@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../core/dialog';
-import { Button } from '../core/button'; // Fixed import
+import { Button } from '../core/button';
 import { cn } from '../../utils/utils';
 
 const ModelsModal = ({ isOpen, onClose, onSelectModel }) => {
@@ -16,43 +16,47 @@ const ModelsModal = ({ isOpen, onClose, onSelectModel }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const fetchModels = async () => {
-      setIsLoading(true);
       setError('');
+      setIsLoading(true);
       try {
-        const response = await fetch('https://open-i0or.onrender.com/api/tags');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (!Array.isArray(data)) {
-          throw new Error('Invalid response: Expected an array');
-        }
-        setModels(data);
-        if (data.length > 0) {
-          setSelectedModel(data[0].name);
+        const res = await fetch('/api/models/library');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const payload = await res.json();
+        if (!Array.isArray(payload.models)) throw new Error('Invalid response shape');
+        setModels(payload.models);
+
+        // restore previous selection or pick the first available
+        const stored = localStorage.getItem('selectedModel');
+        if (stored && payload.models.some(m => m.name === stored)) {
+          setSelectedModel(stored);
+        } else {
+          setSelectedModel(payload.models[0].name);
         }
       } catch (err) {
-        console.error('Error fetching models:', err);
-        setError(err.message);
-        setModels([
-          { name: 'gpt-4o-mini', provider: 'OpenAI', type: 'generation' },
-          { name: 'deepseek-chat', provider: 'DeepSeek', type: 'generation' },
-        ]);
-        setSelectedModel('gpt-4o-mini');
+        console.error('Failed to fetch models:', err);
+        setError('Could not load models.');
+        // fallback hard-coded list
+        const fallback = [
+          { name: 'gpt-4o-mini',  provider: 'OpenAI',  type: 'generation' },
+          { name: 'deepseek-chat',provider: 'DeepSeek',type: 'generation' },
+        ];
+        setModels(fallback);
+        setSelectedModel(fallback[0].name);
       } finally {
         setIsLoading(false);
       }
     };
-    if (isOpen) {
-      fetchModels();
-    }
+
+    fetchModels();
   }, [isOpen]);
 
   const handleSelect = () => {
     if (selectedModel) {
-      onSelectModel(selectedModel);
       localStorage.setItem('selectedModel', selectedModel);
+      onSelectModel(selectedModel);
     }
     onClose();
   };
@@ -66,20 +70,15 @@ const ModelsModal = ({ isOpen, onClose, onSelectModel }) => {
               <Bot className="h-5 w-5" />
               <DialogTitle>Select Model</DialogTitle>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
           </div>
         </DialogHeader>
+
         <div className="grid gap-4 py-4">
-          {error && (
-            <div className="text-sm text-destructive">{error}</div>
-          )}
+          {error && <div className="text-sm text-destructive">{error}</div>}
+
           {isLoading ? (
             <div className="flex items-center justify-center h-20">
               <div className="w-6 h-6 rounded-full bg-primary/80 animate-pulse" />
@@ -98,14 +97,15 @@ const ModelsModal = ({ isOpen, onClose, onSelectModel }) => {
                   'focus:outline-none focus:ring-2 focus:ring-primary w-full'
                 )}
               >
-                {models.map((model) => (
-                  <option key={model.name} value={model.name}>
-                    {model.provider}: {model.name}
+                {models.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.provider}: {m.name}
                   </option>
                 ))}
               </select>
             </div>
           )}
+
           <Button
             onClick={handleSelect}
             disabled={isLoading || !selectedModel}
