@@ -23,12 +23,12 @@ import { Button } from "../core/button";
 import ModelsModal from "../overlay/ModelsModal";
 import { ThemeToggle } from "../shared/ThemeToggle";
 import { ScrollArea } from "../core/scroll-area";
-import TangentLogo from "../shared/TangentLogo";
+import DialogosLogo from "../shared/DialogosLogo";
 import { Sparkles, ChartBarIcon, Text } from "lucide-react";
 import ExploreTab from "./ExploreTab";
 import TopicsPanel from "../visualization/TopicsPanel";
 import MainDashboard from "../visualization/MainDashboard";
-import TangentChat from "../chat/TangentChat";
+import DialogosChat from "../chat/DialogosChat";
 import { useVisualization } from "../providers/VisualizationProvider";
 
 const SharedHeader = ({
@@ -64,13 +64,11 @@ const SharedHeader = ({
       </Button>
 
       <div className="absolute left-0 w-full flex justify-center pointer-events-none">
-        <TangentLogo className="h-6 w-auto" />
+        <DialogosLogo className="h-6 w-auto" />
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
-        <Button variant="outline" size="icon" className="h-9 w-9 border-border">
-          <ThemeToggle theme={theme} setTheme={setTheme} />
-        </Button>
+        
         <Button
           variant="outline"
           size="icon"
@@ -434,7 +432,7 @@ export const IntegratedDashboard = () => {
         return;
       }
 
-      // Build nodes structure for TangentChat
+      // Build nodes structure for DialogosChat
       const nodes = buildConversationNodes(messageData, baseTitle);
       console.log("Processed nodes:", nodes);
 
@@ -649,7 +647,7 @@ export const IntegratedDashboard = () => {
         />
 
         <div className="flex-1 overflow-hidden">
-          <TangentChat
+          <DialogosChat
             initialConversation={selectedConversation}
             isPanelCollapsed={isPanelCollapsed}
             nodes={nodes}

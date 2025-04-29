@@ -6,7 +6,7 @@ import { Button } from '../core/button';
 const TOUR_STEPS = [
   {
     id: 'welcome',
-    title: 'Welcome to Tangent',
+    title: 'Welcome to Dialogos',
     content: 'Discover insights from your AI conversations with our interactive visualization and analysis tools.',
     icon: MessageCircle,
     highlight: 'center',

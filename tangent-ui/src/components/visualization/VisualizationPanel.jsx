@@ -44,8 +44,7 @@ const VisualizationPanel = ({
       branch: 'main',
       x: centerX,
       y: centerY,
-      fx: centerX,
-      fy: centerY,
+      // Removed fx and fy to allow movement
     };
 
     const otherNodes = filteredNodes
@@ -59,8 +58,7 @@ const VisualizationPanel = ({
           branch: node.branch || 'default',
           x: centerX + radius * Math.cos(angle),
           y: centerY + radius * Math.sin(angle),
-          fx: centerX + radius * Math.cos(angle),
-          fy: centerY + radius * Math.sin(angle),
+          // Removed fx and fy to allow movement
         };
       });
 
@@ -69,7 +67,7 @@ const VisualizationPanel = ({
       .map((n) => ({ source: n.parentId.toString(), target: n.id.toString() }));
 
     const result = { nodes: [centerNode, ...otherNodes], links };
-    console.log('Graph Data:', result); // Debug log to verify nodes
+    console.log('Graph Data:', result);
     return result;
   }, [nodes, searchTerm]);
 
@@ -151,7 +149,33 @@ const VisualizationPanel = ({
             nodeAutoColorBy="branch"
             linkDirectionalParticles={0}
             enableNodeDrag={false}
-            cooldownTicks={0}
+            cooldownTicks={Infinity} // Run simulation continuously for wobbling
+            d3VelocityDecay={0.9} // Smooth, slow movement
+            d3Force={(engine) => {
+              // Repulsive force (nodes push away from each other)
+              engine
+                .force('charge', engine.force('charge') || engine.forceManyBody())
+                .strength(-10); // Weak repulsion
+
+              // Centering force (keep nodes around the center)
+              engine
+                .force('center', engine.force('center') || engine.forceCenter(centerX, centerY))
+                .strength(0.05); // Gentle pull to center
+
+              // Attractive force for links (keep connected nodes close)
+              engine
+                .force('link', engine.force('link') || engine.forceLink())
+                .distance(20) // Short link distance for tight clustering
+                .strength(0.1); // Weak attraction
+
+              // Small random forces for wobbling
+              engine
+                .force('x', engine.force('x') || engine.forceX())
+                .strength(() => 0.005 * (Math.random() - 0.5)); // Random small x-force
+              engine
+                .force('y', engine.force('y') || engine.forceY())
+                .strength(() => 0.005 * (Math.random() - 0.5)); // Random small y-force
+            }}
             onNodeClick={(node) => {
               if (focusOnMessage) {
                 focusOnMessage(parseInt(node.id), 0);

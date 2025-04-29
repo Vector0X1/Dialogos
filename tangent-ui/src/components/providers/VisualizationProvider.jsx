@@ -10,7 +10,7 @@ export default function VisualizationProvider({ children }) {
   const [selectedNodePosition, setSelectedNodePosition] = useState(null);
   const [viewportDimensions, setViewportDimensions] = useState({ width: 0, height: 0 });
   const mainDashboardRef = useRef(null);
-  const tangentChatRef = useRef(null);
+  const dialogosChatRef = useRef(null);
 
   // Graph State
   const [graphData, setGraphData] = useState(null);
@@ -102,7 +102,7 @@ export default function VisualizationProvider({ children }) {
     viewportDimensions,
     setViewportDimensions,
     mainDashboardRef,
-    tangentChatRef,
+    dialogosChatRef,
     handleRefresh,
     theme,
     setTheme,

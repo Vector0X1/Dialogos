@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { cn } from '../../utils/utils';
 
-export function TangentLogo() {
+export function DialogosLogo() {
     const [isShowingFront, setIsShowingFront] = useState(true);
     const gridRef = useRef(null);
 
@@ -224,7 +224,7 @@ export function TangentLogo() {
                                             // Removed bg-clear class
                                         )}
                                     >
-                                        TANGENT
+                                        DIALOGOS
                                     </div>
                                 </div>
                             </div>
@@ -236,4 +236,4 @@ export function TangentLogo() {
     );
 }
 
-export default TangentLogo;
+export default DialogosLogo;

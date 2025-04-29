@@ -83,7 +83,7 @@ const systemPrompt = `You are a helpful AI assistant. When responding:
 
 5. Always adapt your response length and content style based on explicit or implicit length cues in the user's question.`;
 
-const TangentChat = ({
+const DialogosChat = ({
   initialConversation,
   isPanelCollapsed = false,
   nodes,
@@ -1638,4 +1638,4 @@ export default function PreviewComponent() {
   );
 };
 
-export default TangentChat;
+export default DialogosChat;
