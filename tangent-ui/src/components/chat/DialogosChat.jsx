@@ -1581,31 +1581,7 @@ useEffect(() => {
         </div>
       </div>
 
-      <ChatContainer size={chatContainerSize} onSizeChange={setChatContainerSize}>
-        <ModelStatus
-          selectedModel={selectedModel}
-          isLoading={isLoading}
-          temperature={temperature}
-          onTemperatureChange={setTemperature}
-          models={models}
-          onModelSelect={setSelectedModel}
-          containerWidth={containerWidth}
-        />
-        {selectedNode && (
-          <ChatInterface
-            messages={getFullMessageHistory(selectedNode)}
-            input={inputValue}
-            isLoading={isLoading}
-            onInputChange={handleInputChange}
-            onSend={handleSendMessage}
-            streamingMessage={streamingMessage}
-            continuationCount={continuationCount}
-            activeNode={nodes.find((n) => n.id === selectedNode)}
-            expandedMessages={expandedMessages}
-            onToggleMessageExpand={handleToggleMessageExpand}
-          />
-        )}
-      </ChatContainer>
+    
 
       <FloatingInput
         

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader2, Mic } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RecordingButton } from '../forms/RecordingButton';
 
@@ -24,7 +24,7 @@ const FloatingInput = ({
     }
   };
 
-  const handleTranscriptionComplete = (transcript) => {
+  const handleTranscriptionComplete = transcript => {
     onInputChange(transcript);
     setIsTranscribing(false);
     if (transcript.trim()) {
@@ -50,19 +50,19 @@ const FloatingInput = ({
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 50 }}
-          className="fixed z-49 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-4 w-96"
+          transition={{ type: 'spring', stiffness: 300, damping: 50 }}
+          className="fixed z-50 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-4 w-96"
           style={{
             left: `${position?.x ?? window.innerWidth / 2 - 192}px`,
-            top: `${position?.y ?? window.innerHeight - 90}px`
+            bottom: '55px'
           }}
         >
           <div className="flex gap-2">
             <textarea
               ref={inputRef}
               value={inputValue}
-              onChange={(e) => onInputChange(e.target.value)}
-              onKeyDown={(e) => {
+              onChange={e => onInputChange(e.target.value)}
+              onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleSendMessage();
