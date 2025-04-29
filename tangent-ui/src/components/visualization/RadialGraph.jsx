@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, RefreshCw, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Search, RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
 import { Input } from '../core/input';
 import { Button } from '../core/button';
 import { Badge } from '../index';
@@ -16,67 +16,48 @@ const VisualizationPanel = ({
   const containerRef = useRef(null);
   const fgRef = useRef();
   const [panelSize, setPanelSize] = useState({ width: 0, height: 0 });
-  const [hoveredNode, setHoveredNode] = useState(null);
+
+  const nodeStats = {
+    chats: nodes?.length || 0,
+    topics: 0,
+  };
 
   const centerX = 0;
   const centerY = 0;
-
-  const baseRadius = 60;
-  const radiusMultiplier = Math.min(1 + nodes.length / 1200, 2.5);
-  const radiusStep = baseRadius * radiusMultiplier;
+  const radiusStep = 80;
 
   const graphData = React.useMemo(() => {
     if (!nodes.length) return { nodes: [], links: [] };
 
-    // Apply search filter if searchTerm is provided
-    const filteredNodes = searchTerm
-      ? nodes.filter((node) =>
-          node.messages?.[0]?.content.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      : nodes;
-
-    if (!filteredNodes.length) return { nodes: [], links: [] };
-
-    const mainNode = filteredNodes.find((n) => n.type === 'main') || filteredNodes[0];
+    const mainNode = nodes.find((n) => n.type === 'main') || nodes[0];
     const centerNode = {
       id: mainNode.id.toString(),
       label: 'Main',
-      branch: 'main',
       x: centerX,
       y: centerY,
       fx: centerX,
       fy: centerY,
     };
 
-    const otherNodes = filteredNodes
+    const otherNodes = nodes
       .filter((n) => n.id !== mainNode.id)
       .map((node, i, arr) => {
         const angle = (i / arr.length) * 2 * Math.PI;
-        const radius = radiusStep;
+        const radius = radiusStep * 1.5;
         return {
           id: node.id.toString(),
           label: node.messages?.[0]?.content.slice(0, 20) || `Node ${node.id}`,
-          branch: node.branch || 'default',
           x: centerX + radius * Math.cos(angle),
           y: centerY + radius * Math.sin(angle),
-          fx: centerX + radius * Math.cos(angle),
-          fy: centerY + radius * Math.sin(angle),
         };
       });
 
-    const links = filteredNodes
+    const links = nodes
       .filter((n) => n.parentId)
       .map((n) => ({ source: n.parentId.toString(), target: n.id.toString() }));
 
-    const result = { nodes: [centerNode, ...otherNodes], links };
-    console.log('Graph Data:', result); // Debug log to verify nodes
-    return result;
-  }, [nodes, searchTerm]);
-
-  const nodeStats = useMemo(() => ({
-    chats: graphData.nodes?.length || 0,
-    topics: graphData.nodes?.filter((n) => n.type === 'topic')?.length || 0,
-  }), [graphData]);
+    return { nodes: [centerNode, ...otherNodes], links };
+  }, [nodes]);
 
   useEffect(() => {
     const updateSize = () => {
@@ -93,9 +74,12 @@ const VisualizationPanel = ({
 
   useEffect(() => {
     if (fgRef.current && graphData.nodes.length > 0) {
-      fgRef.current.zoomToFit(400, 20);
+      const timeout = setTimeout(() => {
+        fgRef.current.zoomToFit(400, 40);
+      }, 300);
+      return () => clearTimeout(timeout);
     }
-  }, [graphData]);
+  }, [graphData, panelSize]);
 
   const toggleFullscreen = async () => {
     if (!containerRef.current) return;
@@ -112,19 +96,12 @@ const VisualizationPanel = ({
     }
   };
 
-  const recenterGraph = () => {
-    if (fgRef.current && graphData.nodes.length > 0) {
-      fgRef.current.zoomToFit(400, 20);
-    }
-  };
-
   return (
     <div
       ref={containerRef}
-      className={`min-h-[50vh] w-full flex flex-col rounded-lg border border-border bg-background ${isFullscreen ? 'h-screen rounded-none border-none' : ''}`}
-      style={{ overflowY: 'auto' }}
+      className={`h-[85vh] w-full flex flex-col rounded-lg border border-border bg-background ${isFullscreen ? 'h-screen rounded-none border-none' : ''}`}
     >
-      <div className="p-4 border-b border-border flex-shrink-0">
+      <div className="p-4 border-b border-border">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -136,44 +113,31 @@ const VisualizationPanel = ({
         </div>
       </div>
 
-      <div
-        className="flex-1 relative w-full"
-        style={{ minHeight: '300px', position: 'relative', overflow: 'hidden' }}
-      >
+      <div className="flex-1 relative">
         {graphData.nodes.length > 0 ? (
           <ForceGraph2D
             ref={fgRef}
             graphData={graphData}
-            width={panelSize.width}
-            height={panelSize.height}
             backgroundColor="#0a0a0a"
             nodeLabel="label"
-            nodeAutoColorBy="branch"
-            linkDirectionalParticles={0}
+            nodeAutoColorBy="id"
+            linkDirectionalParticles={2}
+            linkDirectionalParticleSpeed={0.003}
             enableNodeDrag={false}
-            cooldownTicks={0}
-            onNodeClick={(node) => {
-              if (focusOnMessage) {
-                focusOnMessage(parseInt(node.id), 0);
-              }
-            }}
-            onNodeHover={(node) => setHoveredNode(node)}
+            cooldownTicks={80}
+            onEngineStop={() => fgRef.current?.zoomToFit(400, 40)}
+            onNodeClick={(node) => focusOnMessage?.(parseInt(node.id), 0)}
             nodeCanvasObject={(node, ctx, globalScale) => {
-              const isHovered = node === hoveredNode;
-              const nodeSize = isHovered ? 4 : 3;
-              const fontSize = 8 / globalScale;
+              const fontSize = 10 / globalScale;
               ctx.font = `${fontSize}px Sans-Serif`;
-              ctx.fillStyle = node.color || 'white';
+              ctx.fillStyle = 'white';
               ctx.beginPath();
-              ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI);
+              ctx.arc(node.x, node.y, 3, 0, 2 * Math.PI);
               ctx.fill();
-              if (globalScale > 2 || isHovered) {
-                ctx.fillStyle = 'white';
+              if (globalScale > 1.5) {
                 ctx.fillText(node.label, node.x + 5, node.y + 5);
               }
             }}
-            linkWidth={0.5}
-            linkColor={() => 'rgba(255, 255, 255, 0.2)'}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
@@ -185,7 +149,7 @@ const VisualizationPanel = ({
         )}
       </div>
 
-      <div className="p-4 border-t border-border space-y-3 bg-background flex-shrink-0 sticky bottom-0">
+      <div className="p-4 border-t border-border space-y-3 bg-background">
         <div className="flex justify-between gap-2">
           <Badge variant="outline" className="h-6 bg-background/80 backdrop-blur">
             <span className="px-2 text-xs text-muted-foreground">Chats: {nodeStats.chats}</span>
@@ -199,10 +163,6 @@ const VisualizationPanel = ({
           <Button size="sm" variant="outline" className="gap-2 flex-1" onClick={handleRefresh}>
             <RefreshCw className="h-3 w-3" />
             Refresh
-          </Button>
-          <Button size="sm" variant="outline" className="gap-2 flex-1" onClick={recenterGraph}>
-            <RotateCcw className="h-3 w-3" />
-            Recenter
           </Button>
           <Button size="sm" variant="secondary" onClick={toggleFullscreen}>
             {isFullscreen ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}

@@ -2,6 +2,12 @@ import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../core/tabs";
+import VisualizationPanel from "../visualization/VisualizationPanel";
+
+
+
+
+
 import {
   Share2,
   Download,
@@ -567,12 +573,18 @@ export const IntegratedDashboard = () => {
             </div>
 
             <div className="flex-1 p-4 overflow-hidden">
-              <TabsContent
-                value="dashboard"
-                className="h-full m-0 overflow-hidden"
-              >
-                <MainDashboard />
-              </TabsContent>
+             <TabsContent value="dashboard" className="h-full m-0 overflow-hidden">
+  <ScrollArea className="h-full">
+    <VisualizationPanel
+      nodes={nodes}
+      focusOnMessage={(nodeId) => {
+        setSelectedConversation(nodes); // optional, you might adjust if needed
+        setView("conversation");
+      }}
+    />
+  </ScrollArea>
+</TabsContent>
+
               <TabsContent value="explore" className="h-full m-0">
                 <ScrollArea className="h-full">
                   <ExploreTab />
