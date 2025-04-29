@@ -6,6 +6,7 @@ import threading
 import time
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
+import json
 
 # Add project root to Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -50,7 +51,7 @@ background_processor = BackgroundProcessor()
 
 def load_in_memory_messages():
     """Load persisted messages from disk into IN_MEMORY_MESSAGES."""
-    for chat_type in ["chatgpt"]:
+    for chat_type in ["chatgpt", "deepseek"]:
         file_path = os.path.join(BASE_DATA_DIR, f"{chat_type}_messages.json")
         try:
             if os.path.exists(file_path):

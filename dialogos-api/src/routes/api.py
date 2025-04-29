@@ -139,21 +139,21 @@ def embeddings():
 @api_bp.route("/visualization", methods=["GET"])
 def get_visualization_data():
     """Serve visualization data—both ChatGPT & DeepSeek share the same data dir."""
-    chat_type = request.args.get("type", "chatgpt")
-    if chat_type not in ["chatgpt", "deepseek"]:
-        return jsonify({"error": "Invalid chat type"}), 400
+    try:
+        chat_type = request.args.get("type", "chatgpt")
+        if chat_type not in ["chatgpt", "deepseek"]:
+            return jsonify({"error": "Invalid chat type"}), 400
 
-         data_dir = CHATGPT_DATA_DIR
-    viz = load_visualization_data(data_dir)
-    # validate
-    if not all(isinstance(viz.get(k), t) for k,t in [
-        ("points", list), ("clusters", list), ("titles", list), ("topics", dict)
-    ]):
-        return jsonify({
-            "error": "No visualization data available",
-            "points": [], "clusters": [], "titles": [], "topics": {}, "chats_with_reflections": []
-        }), 200
-
+        data_dir = CHATGPT_DATA_DIR
+        viz = load_visualization_data(data_dir)
+        # validate
+        if not all(isinstance(viz.get(k), t) for k,t in [
+            ("points", list), ("clusters", list), ("titles", list), ("topics", dict)
+        ]):
+            return jsonify({
+                "error": "No visualization data available",
+                "points": [], "clusters": [], "titles": [], "topics": {}, "chats_with_reflections": []
+            }), 200
 
         return jsonify(viz)
 
