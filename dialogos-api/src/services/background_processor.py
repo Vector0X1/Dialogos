@@ -6,7 +6,7 @@ class BackgroundProcessor:
         self.messages = IN_MEMORY_MESSAGES
 
     def process_messages(self, chat_type, messages):
-        """Store messages in IN_MEMORY_MESSAGES."""
+        """Store messages with branch metadata in IN_MEMORY_MESSAGES."""
         if chat_type not in self.messages:
             self.messages[chat_type] = []
         self.messages[chat_type].extend(messages)
