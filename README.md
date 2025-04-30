@@ -1,190 +1,115 @@
 <div align="center">
-
-
-
-## What is this?
-
-Dialogos is a canvas for exploring AI conversations, treating each chat branch as an experiment you can merge, compare, and discard. It lets you resurrect conversations that hit context limits, pick up abandoned threads, and map the hidden connections between different discussions.
-
-## Core stuff it does:
+  <h1>🧠 Dialogos</h1>
+  <h3>A branching thought-canvas for AI conversations powered by OpenAI & DeepSeek</h3>
 </div>
 
-- 🌟 Resurrect & Continue: Seamlessly resume conversations after reaching a prior context limit.
-- 🌿 Branch & Explore: Effortlessly create conversation forks at any point to test multiple approaches or ideas.
-- 💻 Offline-First: Fully powered by local models, leveraging Ollama with plans to expand support.
-- 📂 Topic Clustering: Dynamically organize and filter conversations by their inferred topics, streamlining navigation.
-- 📜 Archive Support: Comprehensive compatibility with Claude and ChatGPT data exports, with additional integrations in development.
+<hr />
 
-<div align="center">
-> The idea is to make your interaction with AI assistants more of an exploration rather than a plain chat interface. Think less "chat app" and more "thoughts workbench" where you can experiment freely, revive old threads that still have potential, or dive into Dialogoss.
+<h2>What is this?</h2>
 
+<p>
+  <strong>Dialogos</strong> is a dynamic interface for exploring and managing complex AI conversations. Each conversation branch is treated as a thread of thought — one you can fork, compare, archive, or revive.
+</p>
 
-## Project Structure
+<p>
+  It’s designed to go <strong>beyond chat</strong>, giving you a <strong>tool for thinking</strong>, experimenting, and mapping how your ideas evolve with AI.
+</p>
 
-The backend is organized into a clean, modular structure:
-</div>
+<h2>🧩 What it does</h2>
+<ul>
+  <li>🌟 <strong>Resurrect & Continue</strong>: Seamlessly resume conversations even after reaching context limits.</li>
+  <li>🌿 <strong>Branch & Explore</strong>: Fork any message and try multiple directions without losing your original path.</li>
+  <li>☁️ <strong>Hosted LLMs</strong>: Powered by OpenAI and DeepSeek — no local models or Ollama setup required.</li>
+  <li>🧠 <strong>Topic Clustering</strong>: Automatically groups chats by theme, so you can track and revisit ideas more easily.</li>
+  <li>📜 <strong>Archive Compatibility</strong>: Works with exported chat files from Claude and ChatGPT.</li>
+</ul>
 
-```
+<blockquote><em>Think of Dialogos as your <strong>AI memory palace</strong>, a place to map out not just what you say — but what you could have said.</em></blockquote>
+
+<h2>🛠️ Project Structure</h2>
+
+<pre><code>
 Dialogos-api
 ├── src
-│   ├── app.py                # Entry point of the application
+│   ├── app.py                # Entry point of the Flask app
 │   ├── config.py             # Configuration settings
-│   ├── models.py             # Data models and structures
-│   ├── tasks.py              # Background task management
-│   ├── utils.py              # Utility functions
-│   ├── routes                # API route definitions
-│   │   ├── __init__.py
-│   │   ├── api.py            # Main API routes
-│   │   ├── chats.py          # Chat-related routes
-│   │   ├── messages.py       # Message retrieval routes
-│   │   ├── states.py         # State management routes
-│   │   └── topics.py         # Topic-related routes
-│   └── services              # Service layer for background processing and data handling
-│       ├── __init__.py
-│       ├── background_processor.py  # Background processing tasks
-│       ├── clustering.py      # Clustering operations
-│       ├── data_processing.py  # Data processing functions
-│       ├── embedding.py       # Embedding functions
-│       ├── reflection.py      # Reflection generation functions
-│       └── topic_generation.py # Topic generation functions
-├── requirements.txt           # Project dependencies
-└── README.md                  # Project documentation
-```
+│   ├── models.py             # Data models and in-memory stores
+│   ├── tasks.py              # Background task orchestration
+│   ├── utils.py              # Utility helpers
+│   ├── routes                # Modular API route definitions
+│   │   ├── api.py            # Main API routes (OpenAI/DeepSeek calls etc.)
+│   │   ├── chats.py
+│   │   ├── messages.py
+│   │   ├── states.py
+│   │   └── topics.py
+│   └── services              # Core service logic
+│       ├── background_processor.py
+│       ├── clustering.py
+│       ├── data_processing.py
+│       ├── embedding.py
+│       ├── reflection.py
+│       └── topic_generation.py
+├── requirements.txt
+└── README.md
+</code></pre>
 
-<div align="center">
- 
+<h2>🚀 Getting Started</h2>
 
-
-</div>
-
-
-
-
-
-```bash
-# Clone the repository
-git clone https://github.com/itsPreto/Dialogos.git
+<h3>1. Clone the Repo</h3>
+<pre><code>git clone https://github.com/itsPreto/Dialogos.git
 cd Dialogos
+</code></pre>
 
-# Make the install script executable and run it
-chmod +x install.sh
-./install.sh
-```
-
-The script will:
-- Check for and start required services (Ollama)
-- Optionally install Whisper.cpp for voice features
-- Set up the Python environment and dependencies
-- Install and start the frontend
-- Set up default models (all-minilm for embeddings, qwen2.5 for generation)
-
-> For manual setup or troubleshooting, see the instructions below.
-
-<div align="center">
- 
-### Manual Setup
-
-</div>
-
-Initialize a new venv (mac):
-```bash
-cd Dialogos-api
-source my_env/bin/activate
-```
-
-Install Python packages:
-```bash
+<h3>2. Install Backend (OpenAI + DeepSeek)</h3>
+<pre><code>cd Dialogos-api
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-```
+</code></pre>
 
-<div align="center">
- 
+<blockquote><strong>Note:</strong> Make sure you have Python 3.10+ installed.</blockquote>
 
-</div>
+<h3>3. Set Your API Keys</h3>
+<p>Create a <code>.env</code> file in <code>Dialogos-api/</code> with:</p>
+<pre><code>OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+DEEPSEEK_API_KEY=your-deepseek-key-if-used
+EMBEDDING_MODEL=your-embedding-model-name
+GENERATION_MODEL=your-generation-model-name
+</code></pre>
 
-
-Verify installation
-```bash
-ollama --version
-ollama version is 0.4.4
-```
-
-Download models (embedding + llm)
-> if you choose to swap these pls see the `Configure local models` section below
-```bash
-ollama pull all-minilm
-ollama pull qwen2.5-coder:7b
-```
-
-Start Ollama (download if u don't already have it)
-```bash
-ollama serve
-```
-
-<div align="center">
- 
-### Backend Setup
-
-</div>
-
-Configure local models:
-```bash
-cd src
-export EMBEDDING_MODEL="custom-embedding-model"
-export GENERATION_MODEL="custom-generation-model"
-```
-
-Then run with:
-```bash
+<h3>4. Start the Backend</h3>
+<pre><code>cd src
 python3 app.py
-```
+</code></pre>
 
-Or all together:
-```bash
-python3 app.py --embedding-model "custom-embedding-model" --generation-model "custom-generation-model"
-```
+<p>The backend will start at: <code>http://localhost:5001/api</code></p>
 
-The backend will start up at `http://localhost:5001/api`.
-
-<div align="center">
- 
-### Frontend Setup
-
-</div>
-
-```bash
-cd simplified-ui
-npm i
+<h3>5. Frontend Setup</h3>
+<pre><code>cd simplified-ui
+npm install
 npm start
-```
-> if you get any missing pckg error just manually install it and restart the UI
+</code></pre>
+<blockquote>If you get any missing package errors, install them manually with <code>npm install &lt;pkg-name&gt;</code>.</blockquote>
+
+<h2>🔌 Supported API Endpoints</h2>
+
+<table>
+  <tr><th>Route</th><th>Description</th></tr>
+  <tr><td><code>POST /api/process</code></td><td>Upload and begin processing exported chat JSON</td></tr>
+  <tr><td><code>GET /api/process/status/&lt;task_id&gt;</code></td><td>Check background task progress</td></tr>
+  <tr><td><code>POST /api/generate</code></td><td>Generate text using OpenAI or DeepSeek</td></tr>
+  <tr><td><code>GET /api/topics</code></td><td>Get all clustered conversation topics</td></tr>
+  <tr><td><code>GET /api/models</code></td><td>View active model config</td></tr>
+  <tr><td><code>POST /api/embeddings</code></td><td>Generate embeddings for given texts</td></tr>
+</table>
+
+<h2>🤝 Contributing</h2>
+
+<p>Pull requests are welcome! Got ideas for features like real-time chat syncing, more LLM integrations, or timeline views? Open an issue or fork it and send a PR.</p>
+
+<hr />
 
 <div align="center">
- 
-### API Endpoints
-
-</div>
-
-The backend exposes these main endpoints:
-- `/api/process`: Send your chat data for processing
-- `/api/process/status/<task_id>`: Check how your processing is going
-- `/api/chats/save`: Save chat data
-- `/api/chats/load/<chat_id>`: Load up specific chats
-- `/api/topics`: Get all the generated topics
-
-Feel free to contribute! Just submit a PR or open an issue for any cool features or fixes you've got in mind.
-
-<div align="center">
- 
-> Licensed under Apache 2.0 - see the LICENSE file for the full details.
-
-</div>
-
----
-
-<div align="center">
-⬇️ - JOIN OUR DISCORD SERVER - ⬇️
- 
-
- 
+  <p>🧬 Licensed under Apache 2.0 — see LICENSE for details</p>
+  <p>💬 Join the conversation in our (Discord coming soon)</p>
 </div>
