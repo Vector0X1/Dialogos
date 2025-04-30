@@ -39,6 +39,7 @@ def add_cors_headers(response):
         "https://open-lac-six.vercel.app",
         "http://localhost:3000",
         "http://localhost:3001",
+        "https://app.dialogos.tech",
     ]
     response.headers["Access-Control-Allow-Origin"] = origin if origin in allowed_origins else "null"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
