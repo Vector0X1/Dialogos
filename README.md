@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://github.com/user-attachments/assets/cd8a656e-f643-439c-a64a-694d521c43fe" alt="tangent" style="border-radius: 10px">
+
 
 ## What is this?
 
-Tangent is a canvas for exploring AI conversations, treating each chat branch as an experiment you can merge, compare, and discard. It lets you resurrect conversations that hit context limits, pick up abandoned threads, and map the hidden connections between different discussions.
+Dialogos is a canvas for exploring AI conversations, treating each chat branch as an experiment you can merge, compare, and discard. It lets you resurrect conversations that hit context limits, pick up abandoned threads, and map the hidden connections between different discussions.
 
 ## Core stuff it does:
 </div>
@@ -16,9 +16,8 @@ Tangent is a canvas for exploring AI conversations, treating each chat branch as
 - 📜 Archive Support: Comprehensive compatibility with Claude and ChatGPT data exports, with additional integrations in development.
 
 <div align="center">
-> The idea is to make your interaction with AI assistants more of a visual/textual/audio exploration rather than a plain chat interface. Think less "chat app" and more "thoughts workbench" where you can experiment freely, revive old threads that still have potential, or dive into tangents.
+> The idea is to make your interaction with AI assistants more of an exploration rather than a plain chat interface. Think less "chat app" and more "thoughts workbench" where you can experiment freely, revive old threads that still have potential, or dive into Dialogoss.
 
-https://github.com/user-attachments/assets/69fac816-ebec-4506-af33-2d31bbe9419e
 
 ## Project Structure
 
@@ -26,7 +25,7 @@ The backend is organized into a clean, modular structure:
 </div>
 
 ```
-tangent-api
+Dialogos-api
 ├── src
 │   ├── app.py                # Entry point of the application
 │   ├── config.py             # Configuration settings
@@ -54,21 +53,18 @@ tangent-api
 
 <div align="center">
  
-## Quick Installation
+
 
 </div>
 
 
 
-* [Whisper.cpp](https://github.com/ggerganov/whisper.cpp) (`git clone https://github.com/ggerganov/whisper.cpp` -> `cd whisper.cpp` -> `sh ./models/download-ggml-model.sh base.en` -> `make` -> `./build/bin/whisper-server`)
-* [Ollama](https://ollama.com/) (project was kinda hardcoded for ollama but can be generalized to accept diff backends)
-* Exported Archive Data (from Claude or ChatGPT)
 
 
 ```bash
 # Clone the repository
-git clone https://github.com/itsPreto/tangent.git
-cd tangent
+git clone https://github.com/itsPreto/Dialogos.git
+cd Dialogos
 
 # Make the install script executable and run it
 chmod +x install.sh
@@ -92,7 +88,7 @@ The script will:
 
 Initialize a new venv (mac):
 ```bash
-cd tangent-api
+cd Dialogos-api
 source my_env/bin/activate
 ```
 
@@ -103,12 +99,9 @@ pip install -r requirements.txt
 
 <div align="center">
  
-### Ollama Setup
 
 </div>
 
-Install Ollama
-> find the appropriate image for your system here: https://ollama.com/
 
 Verify installation
 ```bash
@@ -192,6 +185,6 @@ Feel free to contribute! Just submit a PR or open an issue for any cool features
 <div align="center">
 ⬇️ - JOIN OUR DISCORD SERVER - ⬇️
  
-# [<img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6ca814282eca7172c6_icon_clyde_white_RGB.svg" width="20px" alt="Discord">](https://discord.gg/qHDavVmafF)
+
  
 </div>
