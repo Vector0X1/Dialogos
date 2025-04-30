@@ -26,7 +26,7 @@ app = Flask(__name__)
 
 # Configure CORS globally for all routes
 CORS(app, resources={ r"/api/*": {
-        "origins": ["https://open-lac-six.vercel.app", "http://localhost:3000", "http://localhost:3001"],
+        "origins": ["https://open-lac-six.vercel.app", "http://localhost:3000", "https://app.dialogos.tech", "http://localhost:3001"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
