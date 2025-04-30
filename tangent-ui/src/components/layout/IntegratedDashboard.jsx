@@ -44,7 +44,9 @@ const SharedHeader = ({
   activeChat,
   setActiveChat,
 }) => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   return (
+    <>
     <header
       className={`${isPanelCollapsed ? "w-screen" : "w-[80vw]"
         } h-16 bg-background border border-border ${isPanelCollapsed ? "left-0" : "left-[20vw]"
@@ -88,15 +90,15 @@ const SharedHeader = ({
         <Button variant="outline" size="icon" className="h-9 w-9 border-border">
           <Share2 className="h-4 w-4" />
         </Button>
+        {/* open confirm dialog instead of jumping right into onNewThread */}
         <Button
-          onClick={onNewThread}
+          onClick={() => setConfirmOpen(true)}
           variant="default"
           size="icon"
           className="h-9 w-9 bg-primary"
         >
           <Plus className="h-4 w-4" />
         </Button>
-
         <ChatPersistenceManager
           nodes={nodes}
           onLoadChat={setNodes}
@@ -105,6 +107,26 @@ const SharedHeader = ({
         />
       </div>
     </header>
+
+{confirmOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="bg-background p-6 rounded-lg shadow-lg max-w-sm w-full border-2 border-blue-400">
+    <p className="text-white text-center mb-4 text-sm p-5">
+        Save conversation before making a new one
+      </p>
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+          Cancel
+        </Button>
+        <Button onClick={() => { setConfirmOpen(false); onNewThread(); }}>
+          Proceed
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
+
+</>
   );
 };
 
